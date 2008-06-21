@@ -1,9 +1,9 @@
 #pragma once
 
 #ifdef GENERIC_DETOUR_EXPORTS
-#define GENERIC_DETOUR_API __declspec(dllexport)
+#define GENERIC_DETOUR_API extern "C" __declspec(dllexport)
 #else
-#define GENERIC_DETOUR_API __declspec(dllimport)
+#define GENERIC_DETOUR_API extern "C" __declspec(dllimport)
 #endif
 
 

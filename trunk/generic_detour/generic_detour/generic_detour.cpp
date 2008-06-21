@@ -79,14 +79,7 @@ ESP+C: [arg 2]
 	}
 }
 int detour_c_call_dest(
-	DWORD register_1, 
-	DWORD register_2, 
-	DWORD register_3, 
-	DWORD register_4, 
-	DWORD register_5, 
-	DWORD register_6, 
-	DWORD register_7, 
-	DWORD register_8,  
+	REGISTERS registers,
 	DWORD flags, 
 	DWORD ret_addr, 
 	DWORD caller_ret, 
@@ -106,14 +99,9 @@ int detour_c_call_dest(
 
 	EnterCriticalSection(&dl->second.my_critical_section);
 
-	dl->second.registers[7] = register_1;
-	dl->second.registers[6] = register_2;
-	dl->second.registers[5] = register_3;
-	dl->second.registers[4] = register_4 + 4; //ESP is ignored on POPAD anyway, and its up 4 due to PUSHFD. Lets just correct it for simplicity.
-	dl->second.registers[3] = register_5;
-	dl->second.registers[2] = register_6;
-	dl->second.registers[1] = register_7;
-	dl->second.registers[0] = register_8;
+	registers.esp = registers.esp + 4;
+	dl->second.registers = registers; //ESP is ignored on POPAD anyway, and its up 4 due to PUSHFD. Lets just correct it for simplicity.
+
 	dl->second.flags = flags;
 	dl->second.caller_ret = caller_ret;
 
@@ -122,14 +110,14 @@ int detour_c_call_dest(
 	sprintf_s(tempstring, sizeof(tempstring),"func: 0x%x, ret: 0x%x,\n R[EAX] = 0x%x,\n R[ECX] = 0x%x,\n R[EDX] = 0x%x,\n R[EBX] = 0x%x,\n R[ESP] = 0x%x,\n R[EBP] = 0x%x,\n R[ESI] = 0x%x,\n R[EDI] = 0x%x,\n flags = 0x%x,\n arg0 = 0x%x,\n arg1 = 0x%x\n",
 		ret_addr-5,
 		caller_ret,
-		dl->second.registers[0], //EAX
-		dl->second.registers[1], //ECX
-		dl->second.registers[2], //EDX
-		dl->second.registers[3], //EBX
-		dl->second.registers[4], //ESP
-		dl->second.registers[5], //EBP
-		dl->second.registers[6], //ESI
-		dl->second.registers[7], //EDI
+		dl->second.registers.eax,
+		dl->second.registers.ecx,
+		dl->second.registers.edx,
+		dl->second.registers.ebx,
+		dl->second.registers.esp,
+		dl->second.registers.ebp,
+		dl->second.registers.esi,
+		dl->second.registers.edi,
 		dl->second.flags,
 		dl->second.params[0],
 		dl->second.params[1]
@@ -159,14 +147,14 @@ int detour_c_call_dest(
 	PyObject* ret = PyEval_CallFunction(detour_pyfunc, 
 		"i(iiiiiiii)ii", 
 		ret_addr-5,
-		dl->second.registers[0], //EAX
-		dl->second.registers[1], //ECX
-		dl->second.registers[2], //EDX
-		dl->second.registers[3], //EBX
-		dl->second.registers[4], //ESP
-		dl->second.registers[5], //EBP
-		dl->second.registers[6], //ESI
-		dl->second.registers[7], //EDI
+		dl->second.registers.eax,
+		dl->second.registers.ecx,
+		dl->second.registers.edx,
+		dl->second.registers.ebx,
+		dl->second.registers.esp,
+		dl->second.registers.ebp,
+		dl->second.registers.esi,
+		dl->second.registers.edi,
 		dl->second.flags,
 		caller_ret - 5
 	);
@@ -194,7 +182,7 @@ GENERIC_DETOUR_API int test_detour_func(int count) {
 	return count;
 }
 
-GENERIC_DETOUR_API int stolen_detour_func(DWORD registers[8], DWORD flags, DWORD retaddr, DWORD params[]) {
+GENERIC_DETOUR_API int stolen_detour_func(REGISTERS registers, DWORD flags, DWORD retaddr, DWORD params[]) {
 	MessageBox(0, "I'm the fake test_detour_func!", "Caption", 0);
 	return 42;
 }

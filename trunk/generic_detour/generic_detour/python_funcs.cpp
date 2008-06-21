@@ -4,14 +4,9 @@
 PyObject* myPyGlobals;
 PyObject* myPyLocals;
 
-
-GENERIC_DETOUR_API void run_test() {
-	run_python_file("c:\\test.py");
-}
-
 GENERIC_DETOUR_API PyObject* run_python_string(char* pycode)
 {
-	PyObject* ret = PyRun_String(pycode, Py_eval_input, myPyGlobals, myPyLocals);	
+	PyObject* ret = PyRun_String(pycode, Py_single_input, myPyGlobals, myPyLocals);	
 	if (PyErr_Occurred()) { PyErr_Print(); }
 	return ret;
 }
@@ -22,7 +17,7 @@ GENERIC_DETOUR_API int run_python_file(char* filename)
 	if (PyErr_Occurred()) { PyErr_Print(); }
 	if(pyfile==NULL){
 		OutputDebugString("pyfile is null");
-		return 1;
+		return 0;
 	}
 
 	FILE* f = PyFile_AsFile(pyfile);
@@ -32,9 +27,61 @@ GENERIC_DETOUR_API int run_python_file(char* filename)
 
 	Py_DECREF(pyfile);
 	
-	return 0;
+	return 1;
 }
+PyObject* detour_loadPythonFile(PyObject* self, PyObject* args) {
+	char* filename;
+	if (!PyArg_ParseTuple(args, "s", &filename)) {
+		return NULL;
+	}
+	int ret = run_python_file(filename);
 
+	return Py_BuildValue("i", ret);
+}
+PyObject* detour_WriteMemory(PyObject* self, PyObject* args) {
+	char* address;
+	char* bytes;
+	int bytenum;
+
+	if (!PyArg_ParseTuple(args, "is#", &address, &bytes, &bytenum)) {
+		return NULL;
+	}
+	DWORD oldProt;
+	DWORD dummy;
+	VirtualProtect(address, bytenum, PAGE_EXECUTE_READWRITE, &oldProt);
+	memcpy(address, bytes, bytenum);
+	VirtualProtect(address, bytenum, oldProt, &dummy);
+
+	return Py_BuildValue("i", true);
+}
+PyObject* detour_WriteByte(PyObject* self, PyObject* args) {
+	char* address;
+	char bytes;
+	if (!PyArg_ParseTuple(args, "ic", &address, &bytes)) {
+		return NULL;
+	}
+	DWORD oldProt;
+	DWORD dummy;
+	VirtualProtect(address, 1, PAGE_EXECUTE_READWRITE, &oldProt);
+	memcpy(address, &bytes, 1);
+	VirtualProtect(address, 1, oldProt, &dummy);
+
+	return Py_BuildValue("i", true);
+}
+PyObject* detour_WriteDWORD(PyObject* self, PyObject* args) {
+	char* address;
+	DWORD bytes;
+	if (!PyArg_ParseTuple(args, "ii", &address, &bytes)) {
+		return NULL;
+	}
+	DWORD oldProt;
+	DWORD dummy;
+	VirtualProtect(address, 4, PAGE_EXECUTE_READWRITE, &oldProt);
+	memcpy(address, &bytes, 4);
+	VirtualProtect(address, 4, oldProt, &dummy);
+
+	return Py_BuildValue("i", true);
+}
 PyObject* detour_ReadMemory(PyObject* self, PyObject* args) {
 	char* address;
 	int bytes;
@@ -80,12 +127,16 @@ static PyMethodDef detour_funcs[] = {
 	{"read", (PyCFunction)detour_ReadMemory, METH_VARARGS, "Reads memory, None on NULL pointer"},
 	{"readByte", (PyCFunction)detour_ReadByte, METH_VARARGS, "Reads memory, None on NULL pointer"},
 	{"readDWORD", (PyCFunction)detour_ReadDWORD, METH_VARARGS, "Reads memory"},
+	{"write", (PyCFunction)detour_WriteMemory, METH_VARARGS, "Writes memory"},
+	{"writeByte", (PyCFunction)detour_WriteByte, METH_VARARGS, "Writes memory"},
+	{"writeDWORD", (PyCFunction)detour_WriteDWORD, METH_VARARGS, "Writes memory"},
 	{"callback", (PyCFunction)detour_callback, METH_VARARGS, "Default callback function"},
+	{"loadPythonFile", (PyCFunction)detour_loadPythonFile, METH_VARARGS, "Loads and executes a python file"},
 };
 
 void InitilizePythonFuncs() {
 	PyObject* mainmod = PyImport_AddModule("__main__"); //borrowed ref
-	PyObject* d = PyModule_GetDict(mainmod); //borrowed red
+	PyObject* d = PyModule_GetDict(mainmod); //borrowed ref
 
 	Py_INCREF(d);
 	Py_INCREF(d);

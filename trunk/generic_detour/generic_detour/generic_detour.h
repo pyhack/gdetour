@@ -7,11 +7,21 @@
 #pragma once
 
 #ifdef GENERIC_DETOUR_EXPORTS
-#define GENERIC_DETOUR_API __declspec(dllexport)
+#define GENERIC_DETOUR_API extern "C" __declspec(dllexport)
 #else
-#define GENERIC_DETOUR_API __declspec(dllimport)
+#define GENERIC_DETOUR_API extern "C" __declspec(dllimport)
 #endif
 
+struct REGISTERS {
+	DWORD eax;
+	DWORD ecx;
+	DWORD edx;
+	DWORD ebx;
+	DWORD esp;
+	DWORD ebp;
+	DWORD esi;
+	DWORD edi;
+};
 
 namespace GDetour {
 	struct DETOUR_PARAMS {
@@ -20,7 +30,7 @@ namespace GDetour {
 		BYTE*		address;
 		int			bytes_to_pop_on_ret;
 		CRITICAL_SECTION my_critical_section;
-		DWORD		registers[8];
+		REGISTERS	registers;
 		DWORD		flags;
 		DWORD		caller_ret;
 		DWORD*		params;
@@ -34,8 +44,7 @@ namespace GDetour {
 	GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, int type=0);
 
 	int detour_call_dest();
-	int detour_c_call_dest(DWORD register_1, DWORD register_2, DWORD register_3, DWORD register_4, DWORD register_5, DWORD register_6, DWORD register_7, DWORD register_8,  DWORD flags, DWORD ret_addr, DWORD caller_ret, DWORD param_zero);
-
+	int detour_c_call_dest(REGISTERS registers, DWORD flags, DWORD ret_addr, DWORD caller_ret, DWORD param_zero);
 
 
 };
@@ -45,6 +54,6 @@ DWORD CalculateAbsoluteJMP(DWORD jmp_address, DWORD jmp_reldestination, int jmp_
 
 
 GENERIC_DETOUR_API int test_detour_func(int count=0);
-GENERIC_DETOUR_API int stolen_detour_func(DWORD registers[8], DWORD flags, DWORD retaddr, DWORD params[]);
+GENERIC_DETOUR_API int stolen_detour_func(REGISTERS registers, DWORD flags, DWORD retaddr, DWORD params[]);
 
 GENERIC_DETOUR_API int add_test_detour();

@@ -14,29 +14,27 @@ DWORD WINAPI mainThread(void* lParam) {
 
 	InitilizePythonFuncs();
 
-	PyObject* s = run_python_string("import ctypes\nctypes.windll.user32.MessageBoxA(0, 'runcode is running', 'test.py', 0)");
-	Py_XDECREF(s);
+	//PyObject* s = run_python_string("import ctypes\nctypes.windll.user32.MessageBoxA(0, 'runcode is running', 'test.py', 0)");
+	//Py_XDECREF(s);
 
 
 
-	Sleep(1000);
+	//Sleep(1000);
 
 	//test_detour_func(2);
 
-	add_test_detour();
+	//add_test_detour();
 
-	test_detour_func(2);
+	//test_detour_func(2);
 
 	//AllocConsole();
 
-	run_test();
+	//run_test();
 
-	test_detour_func(2);
+	//test_detour_func(2);
 	
 
 	PyGILState_Release(gstate);
-
-	
 	return 0;
 };
 
