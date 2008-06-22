@@ -87,7 +87,7 @@ ESP+C: [arg 2]
 		ADD ESP, [ESP-40] //move stack by DETOUR_GATEWAY_OPTIONS[0] bytes
 		RET
 
-do_return_to_orig: //untested
+do_return_to_orig:
 		POPFD // 4 bytes
 		ADD ESP, 4 //knock out our return address
 		JMP DWORD PTR [ESP-52] //jmp to DETOUR_GATEWAY_OPTIONS[2]
