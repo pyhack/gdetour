@@ -13,14 +13,15 @@
 #endif
 
 struct REGISTERS {
-	DWORD eax;
-	DWORD ecx;
-	DWORD edx;
-	DWORD ebx;
-	DWORD esp;
-	DWORD ebp;
-	DWORD esi;
+	//in order of the pushad call
 	DWORD edi;
+	DWORD esi;
+	DWORD ebp;
+	DWORD esp;
+	DWORD ebx;
+	DWORD edx;
+	DWORD ecx;
+	DWORD eax;
 };
 
 namespace GDetour {
@@ -28,23 +29,29 @@ namespace GDetour {
 		BYTE		original_code[32];
 		DWORD		original_code_len;
 		BYTE*		address;
-		int			bytes_to_pop_on_ret;
+		//-----
 		CRITICAL_SECTION my_critical_section;
 		REGISTERS	registers;
 		DWORD		flags;
 		DWORD		caller_ret;
 		DWORD*		params;
+		//------
+		int			bytes_to_pop_on_ret;
+		int			call_original_on_return;
+	};
+	struct DETOUR_GATEWAY_OPTIONS {
+		BYTE*		original_code;				//8
+		int			call_original_on_return;	//4
+		int			bytes_to_pop_on_ret;		//0
 	};
 
 
 	extern std::map<BYTE*, DETOUR_PARAMS> detour_list;
 
-	GENERIC_DETOUR_API void initialize();
-
 	GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, int type=0);
 
 	int detour_call_dest();
-	int detour_c_call_dest(REGISTERS registers, DWORD flags, DWORD ret_addr, DWORD caller_ret, DWORD param_zero);
+	void detour_c_call_dest(DETOUR_GATEWAY_OPTIONS gateway_opt, REGISTERS registers, DWORD flags, DWORD ret_addr, DWORD caller_ret, DWORD param_zero);
 
 
 };

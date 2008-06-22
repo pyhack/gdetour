@@ -6,14 +6,33 @@ PyObject* myPyLocals;
 
 GENERIC_DETOUR_API PyObject* run_python_string(char* pycode)
 {
+	PyGILState_STATE state = Python_GrabGIL();
 	PyObject* ret = PyRun_String(pycode, Py_single_input, myPyGlobals, myPyLocals);	
 	if (PyErr_Occurred()) { PyErr_Print(); }
+	Python_ReleaseGIL(state);
 	return ret;
 }
 GENERIC_DETOUR_API int run_python_file(char* filename)
 {
+	char fnbuf[1024];
+	memset(&fnbuf, 0, sizeof(fnbuf));
+	if (filename[1] != ':') {
+		//assume that this is a relative path from this dll
+		HMODULE h = GetModuleHandle("gdetour.dll");
+		GetModuleFileName(h, fnbuf, 1022 - strlen(filename));
+		int l = strlen(fnbuf);
+		for(int i = l; i > 0; i--) {
+			if (fnbuf[i] == '\\') {
+				strncpy(&fnbuf[i+1], filename, 1023 - i);
+				break;
+			}
+		}
+	} else {
+		strncpy(fnbuf, filename, 1023);
+	}
 
-	PyObject* pyfile = PyFile_FromString(filename,"r");
+	PyGILState_STATE state = Python_GrabGIL();
+	PyObject* pyfile = PyFile_FromString(fnbuf,"r");
 	if (PyErr_Occurred()) { PyErr_Print(); }
 	if(pyfile==NULL){
 		OutputDebugString("pyfile is null");
@@ -21,12 +40,12 @@ GENERIC_DETOUR_API int run_python_file(char* filename)
 	}
 
 	FILE* f = PyFile_AsFile(pyfile);
-	PyRun_File(f,filename, Py_file_input, myPyGlobals, myPyLocals);
+	PyRun_File(f,fnbuf, Py_file_input, myPyGlobals, myPyLocals);
 
 	if (PyErr_Occurred()) { PyErr_Print(); }
 
 	Py_DECREF(pyfile);
-	
+	Python_ReleaseGIL(state);
 	return 1;
 }
 PyObject* detour_loadPythonFile(PyObject* self, PyObject* args) {
@@ -111,6 +130,7 @@ PyObject* detour_ReadDWORD(PyObject* self, PyObject* args) {
 	return Py_BuildValue("i", address);
 }
 PyObject* detour_callback(PyObject* self, PyObject* args) {
+
 	char* address;
 	int detoured_addr;
 	int registers[8];
@@ -120,9 +140,10 @@ PyObject* detour_callback(PyObject* self, PyObject* args) {
 		return NULL;
 	}
 	OutputDebugString("Default Python -> C++ callback called\n");
-
+	
 	return Py_BuildValue("s", 0);
 }
+
 static PyMethodDef detour_funcs[] = {
 	{"read", (PyCFunction)detour_ReadMemory, METH_VARARGS, "Reads memory, None on NULL pointer"},
 	{"readByte", (PyCFunction)detour_ReadByte, METH_VARARGS, "Reads memory, None on NULL pointer"},
@@ -132,23 +153,76 @@ static PyMethodDef detour_funcs[] = {
 	{"writeDWORD", (PyCFunction)detour_WriteDWORD, METH_VARARGS, "Writes memory"},
 	{"callback", (PyCFunction)detour_callback, METH_VARARGS, "Default callback function"},
 	{"loadPythonFile", (PyCFunction)detour_loadPythonFile, METH_VARARGS, "Loads and executes a python file"},
+	{NULL, NULL, 0, NULL}
 };
 
-void InitilizePythonFuncs() {
+void Init_detour() {
+    /* Create the module and add the functions */
+    PyObject* m = Py_InitModule3("detour", detour_funcs, "Generic Process Detour");
+}
+
+
+
+
+
+
+
+
+//------------------------------------------------------------------------------
+
+//PyThreadState* mainPythonThreadState = NULL;
+
+void Python_Initialize() {
+	Py_Initialize();
+	if (!Py_IsInitialized()) {
+		OutputDebugString("Python could not be initilized\n");
+	}
+	PyEval_InitThreads();
+	//mainPythonThreadState = PyThreadState_Get();
+
 	PyObject* mainmod = PyImport_AddModule("__main__"); //borrowed ref
 	PyObject* d = PyModule_GetDict(mainmod); //borrowed ref
 
 	Py_INCREF(d);
 	Py_INCREF(d);
 
-	myPyGlobals = d; //PyDict_New();
-	myPyLocals = d; //PyDict_New();
+	myPyGlobals = d;
+	myPyLocals = d;
 
-
-    /* Create the module and add the functions */
-    PyObject* m = Py_InitModule3("detour", detour_funcs, "Generic Process Detour");
+	Init_detour();
 
 	PyImport_ImportModuleEx("detour", myPyGlobals, myPyLocals, NULL);
 
+	//PyEval_ReleaseLock();
+}
+void Python_Unload() {
+	PyGILState_STATE state = Python_GrabGIL();
+
+	Py_XDECREF(myPyGlobals);
+	Py_XDECREF(myPyLocals);
+	myPyGlobals = NULL;
+	myPyLocals = NULL;
+
+	Py_Finalize();
+
 }
 
+
+PyGILState_STATE Python_GrabGIL() {
+	PyGILState_STATE state = PyGILState_Ensure();
+	return state;
+/*
+	PyEval_AcquireLock();
+	PyInterpreterState* s = mainPythonThreadState->interp;
+
+	PyThreadState* myThreadState = PyThreadState_New(s);
+
+	PyThreadState_Swap(myThreadState);
+	*/
+}
+void Python_ReleaseGIL(PyGILState_STATE state) {
+	if (state == NULL) {
+		return;
+	}
+	PyGILState_Release(state);
+}

@@ -8,9 +8,6 @@
 namespace GDetour {
 	std::map<BYTE*, DETOUR_PARAMS> detour_list;
 
-GENERIC_DETOUR_API void initialize() {
-	//detour_list = new std::map<BYTE*, BYTE*>;
-}
 GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, int type) {
 	//type is unused. provided for forward compat.
 	if (overwrite_length < 5) {
@@ -24,9 +21,9 @@ GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int byte
 		return false; //need 5 bytes in backed up code
 	}
 	dl.original_code_len = overwrite_length;
-	for(int i = 0; i < sizeof(dl.original_code); i++) {
-		dl.original_code[i] = 0x90; //NOP
-	}
+
+	memset(&dl.original_code[0], 0x90, sizeof(dl.original_code)); //nop
+
 
 	InitializeCriticalSection(&dl.my_critical_section);
 
@@ -46,8 +43,6 @@ GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int byte
 	addr = (BYTE*) address;
 	jaddr = (DWORD*) (addr + 1);
 	addr[0] = 0xE8; //A Call!
-	addr[0] = 0xE8; //A Call!
-
 
 	jaddr[0] = CalculateRelativeJMP((DWORD) addr, (DWORD) &detour_call_dest);
 	addr[5] = 90;
@@ -66,19 +61,28 @@ ESP+4: [return address of the caller]
 ESP+8: [arg 1]
 ESP+C: [arg 2]
 */
+//TODO: 
 	__asm {
 		PUSHFD
 		PUSHAD
-		CALL detour_c_call_dest
-		PUSH EAX //store number of bytes to pop right above everything
-		ADD ESP, 4 //skip what we just pushed
-		POPAD
-		POPFD
-		ADD ESP, [ESP-40] //move stack appropriately
+		SUB ESP, 12 //sizeof(DETOUR_GATEWAY_OPTIONS)
+		CALL detour_c_call_dest //returns nothing, all options are in above struct
+		ADD ESP, 12 //skip sizeof(DETOUR_GATEWAY_OPTIONS)
+		POPAD //32 bytes
+		CMP [ESP-40], 1 //check DETOUR_GATEWAY_OPTIONS[1] for 1
+		JE do_return_to_orig
+
+		POPFD //4 bytes
+		ADD ESP, [ESP-40] //move stack by DETOUR_GATEWAY_OPTIONS[0] bytes
 		RET
+
+do_return_to_orig: //untested
+		POPFD // 4 bytes
+		JMP DWORD PTR [ESP-48] //jmp to DETOUR_GATEWAY_OPTIONS[2]
 	}
 }
-int detour_c_call_dest(
+void detour_c_call_dest(
+	DETOUR_GATEWAY_OPTIONS gateway_opt,
 	REGISTERS registers,
 	DWORD flags, 
 	DWORD ret_addr, 
@@ -87,20 +91,26 @@ int detour_c_call_dest(
 
 	char tempstring[512];
 
+	memset(&gateway_opt, 0, sizeof(gateway_opt));
 
 	std::map<BYTE*, DETOUR_PARAMS>::iterator dl = detour_list.find((BYTE*)(ret_addr-5));
 	if (dl == detour_list.end()) {
 		sprintf_s(tempstring, sizeof(tempstring), "Called detour from function 0x%x and could not find a registered handler. Crash is likely.", (ret_addr-5));
 		OutputDebugString(tempstring);
-		return 0;
+		return;
 	}
-
-	
 
 	EnterCriticalSection(&dl->second.my_critical_section);
 
-	registers.esp = registers.esp + 4;
-	dl->second.registers = registers; //ESP is ignored on POPAD anyway, and its up 4 due to PUSHFD. Lets just correct it for simplicity.
+	gateway_opt.call_original_on_return = 0;
+	if (dl->second.call_original_on_return != 0) {
+		gateway_opt.call_original_on_return = 1;
+	}
+	gateway_opt.bytes_to_pop_on_ret = dl->second.bytes_to_pop_on_ret;
+	gateway_opt.original_code = (BYTE*) &dl->second.original_code;
+
+	registers.esp = registers.esp + 4; //ESP is ignored on POPAD anyway, and its up 4 due to PUSHFD. Lets just correct it for simplicity.
+	dl->second.registers = registers;
 
 	dl->second.flags = flags;
 	dl->second.caller_ret = caller_ret;
@@ -127,9 +137,10 @@ int detour_c_call_dest(
 
 	OutputDebugString("Trying to communicate with Python...\n");
 
-	::PyGILState_STATE gstate = PyGILState_Ensure();
+	/* ensure we hold the lock */
 
-	//PyObject* m = PyDict_GetItemString(myPyLocals, "detour");
+	PyGILState_STATE state = Python_GrabGIL();
+
 	PyObject* m = PyImport_AddModule("detour");
 
 	if (m == NULL) {
@@ -163,12 +174,13 @@ int detour_c_call_dest(
 	Py_XDECREF(detour_pyfunc);
 	pastPython:
 
-	::PyGILState_Release(gstate);
+	/* Restore the state of Python */
+	Python_ReleaseGIL(state);
+
 	
 	
 	LeaveCriticalSection(&dl->second.my_critical_section);
 
-	return dl->second.bytes_to_pop_on_ret;
 }
 
 }
