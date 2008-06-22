@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "python_funcs.h"
+#include "generic_detour.h"
 
 PyObject* myPyGlobals;
 PyObject* myPyLocals;
@@ -101,6 +102,18 @@ PyObject* detour_WriteDWORD(PyObject* self, PyObject* args) {
 
 	return Py_BuildValue("i", true);
 }
+PyObject* detour_ReadASCIIZ(PyObject* self, PyObject* args) {
+	char* address;
+
+	if (!PyArg_ParseTuple(args, "i", &address)) {
+		return NULL;
+	}
+	__try {
+		return Py_BuildValue("s", address);
+	} __except (1) {
+		return Py_BuildValue("s", NULL);
+	}
+}
 PyObject* detour_ReadMemory(PyObject* self, PyObject* args) {
 	char* address;
 	int bytes;
@@ -108,8 +121,12 @@ PyObject* detour_ReadMemory(PyObject* self, PyObject* args) {
 	if (!PyArg_ParseTuple(args, "ii", &address, &bytes)) {
 		return NULL;
 	}
-	
-	return Py_BuildValue("s#", address, bytes);
+	try {
+		return Py_BuildValue("s#", address, bytes);
+	} catch(...) {
+		return Py_BuildValue("s", NULL);
+	}
+
 }
 PyObject* detour_ReadByte(PyObject* self, PyObject* args) {
 	char* address;
@@ -121,14 +138,15 @@ PyObject* detour_ReadByte(PyObject* self, PyObject* args) {
 	return Py_BuildValue("s#", address, 1);
 }
 PyObject* detour_ReadDWORD(PyObject* self, PyObject* args) {
-	char* address;
+	int* address;
 
 	if (!PyArg_ParseTuple(args, "i", &address)) {
 		return NULL;
 	}
 	
-	return Py_BuildValue("i", address);
+	return Py_BuildValue("i", *address);
 }
+
 PyObject* detour_callback(PyObject* self, PyObject* args) {
 
 	char* address;
@@ -144,7 +162,60 @@ PyObject* detour_callback(PyObject* self, PyObject* args) {
 	return Py_BuildValue("s", 0);
 }
 
+PyObject* detour_createDetour(PyObject* self, PyObject* args) {
+	BYTE* address;
+	int overwrite_length;
+	int bytes_to_pop;
+	int type = 0;
+
+	if (!PyArg_ParseTuple(args, "iiii", &address, &overwrite_length, &bytes_to_pop, &type)) {
+		return NULL;
+	}
+
+	bool ret = GDetour::add_detour(address, overwrite_length, bytes_to_pop, type);
+	
+	return Py_BuildValue("i", ret);
+
+}
+PyObject* detour_getDetourSettings(PyObject* self, PyObject* args) {
+	GDetour::DETOUR_PARAMS* dp;
+	BYTE* address;
+	if (!PyArg_ParseTuple(args, "i", &address)) {
+		return NULL;
+	}
+
+	dp = GDetour::get_detour_settings(address);
+	if (dp == NULL) {
+		return PyErr_Format(PyExc_LookupError, "%p is an invalid detoured address", address);
+	}
+	return Py_BuildValue("(ii)", 
+		dp->bytes_to_pop_on_ret,
+		dp->call_original_on_return
+	);
+}
+PyObject* detour_setDetourSettings(PyObject* self, PyObject* args) {
+	GDetour::DETOUR_PARAMS n;
+	GDetour::DETOUR_PARAMS* dp;
+	BYTE* address;
+	if (!PyArg_ParseTuple(args, "i(ii)", &address, 
+			&n.bytes_to_pop_on_ret, 
+			&n.call_original_on_return)
+			) {
+		return NULL;
+	}
+
+	dp = GDetour::get_detour_settings(address);
+	if (dp == NULL) {
+		return PyErr_Format(PyExc_LookupError, "%p is an invalid detoured address", address);
+	}
+	
+	dp->bytes_to_pop_on_ret = n.bytes_to_pop_on_ret;
+	dp->call_original_on_return = n.call_original_on_return;
+
+	return Py_BuildValue("i", true);
+}
 static PyMethodDef detour_funcs[] = {
+	{"readASCIIZ", (PyCFunction)detour_ReadASCIIZ, METH_VARARGS, "Reads memory, None on NULL pointer"},
 	{"read", (PyCFunction)detour_ReadMemory, METH_VARARGS, "Reads memory, None on NULL pointer"},
 	{"readByte", (PyCFunction)detour_ReadByte, METH_VARARGS, "Reads memory, None on NULL pointer"},
 	{"readDWORD", (PyCFunction)detour_ReadDWORD, METH_VARARGS, "Reads memory"},
@@ -153,12 +224,16 @@ static PyMethodDef detour_funcs[] = {
 	{"writeDWORD", (PyCFunction)detour_WriteDWORD, METH_VARARGS, "Writes memory"},
 	{"callback", (PyCFunction)detour_callback, METH_VARARGS, "Default callback function"},
 	{"loadPythonFile", (PyCFunction)detour_loadPythonFile, METH_VARARGS, "Loads and executes a python file"},
+
+	{"createDetour", (PyCFunction)detour_createDetour, METH_VARARGS, "Creates the detour"},
+	{"getDetourSettings", (PyCFunction)detour_getDetourSettings, METH_VARARGS, "Retreives a detour's settings"},
+	{"setDetourSettings", (PyCFunction)detour_setDetourSettings, METH_VARARGS, "Modifies a detour's settings"},
 	{NULL, NULL, 0, NULL}
 };
 
-void Init_detour() {
+void Init_gdetour() {
     /* Create the module and add the functions */
-    PyObject* m = Py_InitModule3("detour", detour_funcs, "Generic Process Detour");
+    PyObject* m = Py_InitModule3("gdetour", detour_funcs, "Generic Process Detour");
 }
 
 
@@ -189,9 +264,9 @@ void Python_Initialize() {
 	myPyGlobals = d;
 	myPyLocals = d;
 
-	Init_detour();
+	Init_gdetour();
 
-	PyImport_ImportModuleEx("detour", myPyGlobals, myPyLocals, NULL);
+	PyImport_ImportModuleEx("gdetour", myPyGlobals, myPyLocals, NULL);
 
 	//PyEval_ReleaseLock();
 }

@@ -8,6 +8,14 @@
 namespace GDetour {
 	std::map<BYTE*, DETOUR_PARAMS> detour_list;
 
+GENERIC_DETOUR_API DETOUR_PARAMS* get_detour_settings(BYTE* address) {
+	std::map<BYTE*, DETOUR_PARAMS>::iterator dl = detour_list.find(address);
+	if (dl == detour_list.end()) {
+		return NULL;
+	}
+	return &dl->second;
+}
+
 GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, int type) {
 	//type is unused. provided for forward compat.
 	if (overwrite_length < 5) {
@@ -22,21 +30,18 @@ GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int byte
 	}
 	dl.original_code_len = overwrite_length;
 
-	memset(&dl.original_code[0], 0x90, sizeof(dl.original_code)); //nop
+	memset(&dl.original_code[0], 0xCC, sizeof(dl.original_code)); //nop
 
 
 	InitializeCriticalSection(&dl.my_critical_section);
 
 	
 	memcpy(dl.original_code, address, overwrite_length);
-	dl.original_code[overwrite_length] = 0xE9; //JMP
-	DWORD cont = CalculateRelativeJMP(dl.original_code[overwrite_length], (DWORD) address + overwrite_length);
-	memcpy(&dl.original_code[overwrite_length+1], (void*) cont, 4);
 
 	DWORD oldProt = 0;
 	DWORD dummy = 0;
 
-	VirtualProtect(address, 7, PAGE_EXECUTE_READWRITE, &oldProt);
+	VirtualProtect(address, overwrite_length, PAGE_EXECUTE_READWRITE, &oldProt);
 
 	BYTE* addr;
 	DWORD* jaddr;
@@ -45,11 +50,17 @@ GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int byte
 	addr[0] = 0xE8; //A Call!
 
 	jaddr[0] = CalculateRelativeJMP((DWORD) addr, (DWORD) &detour_call_dest);
-	addr[5] = 90;
-	addr[6] = 90;
-	VirtualProtect(address, 7, oldProt, &dummy);
+	for(int i = 5; i < overwrite_length; i++) {
+		addr[i] = 0x90;
+	}
+	VirtualProtect(address, overwrite_length, oldProt, &dummy);
 
 	detour_list[address] = dl;
+
+	detour_list[address].original_code[overwrite_length] = 0xE9; //JMP
+	DWORD* rj = (DWORD*)&detour_list[address].original_code[overwrite_length+1];
+	*rj = CalculateRelativeJMP((DWORD) &detour_list[address].original_code[overwrite_length], (DWORD) (address + overwrite_length));
+
 	return true;
 };
 
@@ -78,7 +89,8 @@ ESP+C: [arg 2]
 
 do_return_to_orig: //untested
 		POPFD // 4 bytes
-		JMP DWORD PTR [ESP-48] //jmp to DETOUR_GATEWAY_OPTIONS[2]
+		ADD ESP, 4 //knock out our return address
+		JMP DWORD PTR [ESP-52] //jmp to DETOUR_GATEWAY_OPTIONS[2]
 	}
 }
 void detour_c_call_dest(
@@ -141,7 +153,7 @@ void detour_c_call_dest(
 
 	PyGILState_STATE state = Python_GrabGIL();
 
-	PyObject* m = PyImport_AddModule("detour");
+	PyObject* m = PyImport_AddModule("gdetour");
 
 	if (m == NULL) {
 		OutputDebugString("Can't call detour! module not in locals!\n");

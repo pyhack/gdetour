@@ -50,6 +50,8 @@ namespace GDetour {
 
 	GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, int type=0);
 
+	GENERIC_DETOUR_API DETOUR_PARAMS* get_detour_settings(BYTE* address);
+
 	int detour_call_dest();
 	void detour_c_call_dest(DETOUR_GATEWAY_OPTIONS gateway_opt, REGISTERS registers, DWORD flags, DWORD ret_addr, DWORD caller_ret, DWORD param_zero);
 
