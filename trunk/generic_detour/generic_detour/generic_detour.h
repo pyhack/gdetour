@@ -49,6 +49,7 @@ namespace GDetour {
 	extern std::map<BYTE*, DETOUR_PARAMS> detour_list;
 
 	GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, int type=0);
+	GENERIC_DETOUR_API bool remove_detour(BYTE* address);
 
 	GENERIC_DETOUR_API DETOUR_PARAMS* get_detour_settings(BYTE* address);
 

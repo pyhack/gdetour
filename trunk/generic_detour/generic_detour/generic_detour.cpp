@@ -15,7 +15,20 @@ GENERIC_DETOUR_API DETOUR_PARAMS* get_detour_settings(BYTE* address) {
 	}
 	return &dl->second;
 }
-
+GENERIC_DETOUR_API bool remove_detour(BYTE* address) {
+	std::map<BYTE*, DETOUR_PARAMS>::iterator dl = detour_list.find(address);
+	if (dl == detour_list.end()) {
+		return false;
+	}
+	int overwrite_length = dl->second.original_code_len;
+	DWORD oldProt = 0;
+	DWORD dummy = 0;
+	VirtualProtect(address, overwrite_length, PAGE_EXECUTE_READWRITE, &oldProt);
+	memcpy(address, &dl->second.original_code, overwrite_length);
+	VirtualProtect(address, overwrite_length, oldProt, &dummy);
+	detour_list.erase(dl);
+	return true;
+}
 GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, int type) {
 	//type is unused. provided for forward compat.
 	if (overwrite_length < 5) {
@@ -182,6 +195,9 @@ void detour_c_call_dest(
 		caller_ret - 5
 	);
 	if (PyErr_Occurred()) { PyErr_Print(); }
+
+	registers = dl->second.registers;
+
 	OutputDebugString("Done.\n");
 	Py_XDECREF(detour_pyfunc);
 	pastPython:
