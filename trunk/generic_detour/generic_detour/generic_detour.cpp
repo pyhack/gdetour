@@ -5,19 +5,86 @@
 #include "generic_detour.h"
 #include "python_module_gdetour.h"
 
-namespace GDetour {
-	std::map<BYTE*, DETOUR_PARAMS> detour_list;
 
-GENERIC_DETOUR_API DETOUR_PARAMS* get_detour_settings(BYTE* address) {
-	std::map<BYTE*, DETOUR_PARAMS>::iterator dl = detour_list.find(address);
-	if (dl == detour_list.end()) {
-		return NULL;
+detour_list_type detours;
+
+
+GDetour::GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, int type) {
+	//type is unused. provided for forward compat.
+	if (overwrite_length < 5) {
+		return; //need 5 bytes at minimum for JMP in
 	}
-	return &dl->second;
+	if (overwrite_length > sizeof(this->original_code)-5) {
+		return; //need 5 bytes in backed up code for JMP return
+	}
+	this->Applied = false;
+	this->address = address;
+	memset(&this->live_settings, 0x0, sizeof(this->live_settings)); //Zero out live settings
+	memset((BYTE*)&this->original_code, 0xCC, sizeof(this->original_code)); //fill with breakpoint
+	this->original_code_len = overwrite_length;
+
+	this->gateway_opt.bytes_to_pop_on_ret = bytes_to_pop;
+	this->gateway_opt.call_original_on_return = false;
+
+	this->gateway_opt.original_code = (BYTE*)&this->original_code;
+
+	InitializeCriticalSection(&this->my_critical_section);
+
+	memcpy(this->original_code, this->address, this->original_code_len);
+
+	this->original_code[this->original_code_len] = 0xE9; //JMP
+	DWORD* retJmp = (DWORD*)&this->original_code[this->original_code_len+1];
+	*retJmp = CalculateRelativeJMP((DWORD)&this->original_code[this->original_code_len], (DWORD) (this->address + this->original_code_len));
+
+
 }
+
+bool GDetour::Apply() {
+	if (this->Applied) {
+		return true;
+	}
+
+	DWORD oldProt = 0;
+	DWORD dummy = 0;
+
+	VirtualProtect(this->address, this->original_code_len, PAGE_EXECUTE_READWRITE, &oldProt);
+
+	BYTE* addr;
+	DWORD* jaddr;
+	addr = (BYTE*) this->address;
+	jaddr = (DWORD*) (addr + 1);
+	addr[0] = 0xE8; //A Call!
+
+	jaddr[0] = CalculateRelativeJMP((DWORD) addr, (DWORD) &detour_call_dest);
+	for(DWORD i = 5; i < this->original_code_len; i++) {
+		addr[i] = 0x90; //Set extra bytes to NOP
+	}
+	VirtualProtect(this->address, this->original_code_len, oldProt, &dummy);
+
+	this->Applied = true;
+}
+bool GDetour::Unapply() {
+	if (!this->Applied) {
+		return true;
+	}
+	DWORD oldProt = 0;
+	DWORD dummy = 0;
+	VirtualProtect(this->address, this->original_code_len, PAGE_EXECUTE_READWRITE, &oldProt);
+	memcpy(this->address, &this->original_code, this->original_code_len);
+	VirtualProtect(this->address, this->original_code_len, oldProt, &dummy);
+	this->Applied = false;
+}
+GDetour::~GDetour() {
+	if (this->Applied) {
+		this->Unapply();
+	}
+}
+
+
+
 GENERIC_DETOUR_API bool remove_detour(BYTE* address) {
-	std::map<BYTE*, DETOUR_PARAMS>::iterator dl = detour_list.find(address);
-	if (dl == detour_list.end()) {
+	detour_list_type::iterator dl = detours.find(address);
+	if (dl == detours.end()) {
 		return false;
 	}
 	int overwrite_length = dl->second.original_code_len;
@@ -26,53 +93,10 @@ GENERIC_DETOUR_API bool remove_detour(BYTE* address) {
 	VirtualProtect(address, overwrite_length, PAGE_EXECUTE_READWRITE, &oldProt);
 	memcpy(address, &dl->second.original_code, overwrite_length);
 	VirtualProtect(address, overwrite_length, oldProt, &dummy);
-	detour_list.erase(dl);
+	detours.erase(dl);
 	return true;
 }
 GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, int type) {
-	//type is unused. provided for forward compat.
-	if (overwrite_length < 5) {
-		return false; //need 5 bytes at minimum
-	}
-	DETOUR_PARAMS dl = detour_list[address];
-	dl.address = address;
-	dl.bytes_to_pop_on_ret = bytes_to_pop;
-	if (overwrite_length > sizeof(dl.original_code)-5) {
-		detour_list.erase(address);
-		return false; //need 5 bytes in backed up code
-	}
-	dl.original_code_len = overwrite_length;
-
-	memset(&dl.original_code[0], 0xCC, sizeof(dl.original_code)); //nop
-
-
-	InitializeCriticalSection(&dl.my_critical_section);
-
-	
-	memcpy(dl.original_code, address, overwrite_length);
-
-	DWORD oldProt = 0;
-	DWORD dummy = 0;
-
-	VirtualProtect(address, overwrite_length, PAGE_EXECUTE_READWRITE, &oldProt);
-
-	BYTE* addr;
-	DWORD* jaddr;
-	addr = (BYTE*) address;
-	jaddr = (DWORD*) (addr + 1);
-	addr[0] = 0xE8; //A Call!
-
-	jaddr[0] = CalculateRelativeJMP((DWORD) addr, (DWORD) &detour_call_dest);
-	for(int i = 5; i < overwrite_length; i++) {
-		addr[i] = 0x90;
-	}
-	VirtualProtect(address, overwrite_length, oldProt, &dummy);
-
-	detour_list[address] = dl;
-
-	detour_list[address].original_code[overwrite_length] = 0xE9; //JMP
-	DWORD* rj = (DWORD*)&detour_list[address].original_code[overwrite_length+1];
-	*rj = CalculateRelativeJMP((DWORD) &detour_list[address].original_code[overwrite_length], (DWORD) (address + overwrite_length));
 
 	return true;
 };
@@ -108,70 +132,63 @@ do_return_to_orig:
 }
 void detour_c_call_dest(
 	DETOUR_GATEWAY_OPTIONS gateway_opt,
-	REGISTERS registers,
-	DWORD flags, 
-	DWORD ret_addr, 
-	DWORD caller_ret, 
-	DWORD param_zero) {
+	DETOUR_LIVE_SETTINGS stack
+	) {
 
 	char tempstring[512];
 
 	memset(&gateway_opt, 0, sizeof(gateway_opt));
 
-	std::map<BYTE*, DETOUR_PARAMS>::iterator dl = detour_list.find((BYTE*)(ret_addr-5));
-	if (dl == detour_list.end()) {
-		sprintf_s(tempstring, sizeof(tempstring), "Called detour from function 0x%x and could not find a registered handler. Crash is likely.", (ret_addr-5));
+	detour_list_type::iterator dl = detours.find((BYTE*)(stack.ret_addr-5));
+	if (dl == detours.end()) {
+		sprintf_s(tempstring, sizeof(tempstring), "Called detour from function 0x%x and could not find a registered handler. Crash is likely.", (stack.ret_addr-5));
 		OutputDebugString(tempstring);
 		return;
 	}
 
-	EnterCriticalSection(&dl->second.my_critical_section);
+	GDetour &d = dl->second;
 
-	gateway_opt.call_original_on_return = 0;
-	if (dl->second.call_original_on_return != 0) {
-		gateway_opt.call_original_on_return = 1;
-	}
-	gateway_opt.bytes_to_pop_on_ret = dl->second.bytes_to_pop_on_ret;
-	gateway_opt.original_code = (BYTE*) &dl->second.original_code;
+	EnterCriticalSection(&d.my_critical_section);
 
-	registers.esp = registers.esp + 4; //ESP is ignored on POPAD anyway, and its up 4 due to PUSHFD. Lets just correct it for simplicity.
-	dl->second.registers = registers;
+	gateway_opt = d.gateway_opt; //copy options to the stack
 
-	dl->second.flags = flags;
-	dl->second.caller_ret = caller_ret;
+	stack.registers.esp = stack.registers.esp + 4; //ESP is ignored on POPAD anyway, and its up 4 due to PUSHFD. Lets just correct it for simplicity.
 
-	dl->second.params = &param_zero;
+	d.live_settings = stack;
 
 	sprintf_s(tempstring, sizeof(tempstring),"func: 0x%x, ret: 0x%x,\n R[EAX] = 0x%x,\n R[ECX] = 0x%x,\n R[EDX] = 0x%x,\n R[EBX] = 0x%x,\n R[ESP] = 0x%x,\n R[EBP] = 0x%x,\n R[ESI] = 0x%x,\n R[EDI] = 0x%x,\n flags = 0x%x,\n arg0 = 0x%x,\n arg1 = 0x%x\n",
-		ret_addr-5,
-		caller_ret,
-		dl->second.registers.eax,
-		dl->second.registers.ecx,
-		dl->second.registers.edx,
-		dl->second.registers.ebx,
-		dl->second.registers.esp,
-		dl->second.registers.ebp,
-		dl->second.registers.esi,
-		dl->second.registers.edi,
-		dl->second.flags,
-		dl->second.params[0],
-		dl->second.params[1]
+		d.live_settings.ret_addr-5,
+		d.live_settings.caller_ret,
+		d.live_settings.registers.eax,
+		d.live_settings.registers.ecx,
+		d.live_settings.registers.edx,
+		d.live_settings.registers.ebx,
+		d.live_settings.registers.esp,
+		d.live_settings.registers.ebp,
+		d.live_settings.registers.esi,
+		d.live_settings.registers.edi,
+		d.live_settings.flags,
+		d.live_settings.paramZero,
+		(DWORD*)(&d.live_settings.paramZero)[1]
 		);
 	//MessageBox(0,tempstring, "",0);
 	OutputDebugString(tempstring);
 
-	CallPythonDetour(dl, ret_addr, caller_ret);
+	CallPythonDetour(d);
 
-	registers = dl->second.registers; //Copy the temporary registers back to the stack
-	
+	stack = d.live_settings; //Copy the temporary live settings back to the stack
 	
 	LeaveCriticalSection(&dl->second.my_critical_section);
 
 }
 
+GENERIC_DETOUR_API GDetour* getDetour(BYTE* address) {
+	detour_list_type::iterator dl = detours.find((BYTE*)(address));
+	if (dl == detours.end()) {
+		return NULL;
+	}
+	return &dl->second;
 }
-
-
 GENERIC_DETOUR_API int test_detour_func(int count) {
 	MessageBox(0, "I'm the real test_detour_func!", "Caption", 0);
 	if (count < 2) {
@@ -186,7 +203,7 @@ GENERIC_DETOUR_API int stolen_detour_func(REGISTERS registers, DWORD flags, DWOR
 }
 
 GENERIC_DETOUR_API int add_test_detour() {
-	return GDetour::add_detour((BYTE*) &test_detour_func, 5, 4);
+	return add_detour((BYTE*) &test_detour_func, 5, 4);
 }
 
 

@@ -23,45 +23,53 @@ struct REGISTERS {
 	DWORD ecx;
 	DWORD eax;
 };
+struct DETOUR_GATEWAY_OPTIONS {
+	BYTE*		original_code;				//8
+	int			call_original_on_return;	//4
+	int			bytes_to_pop_on_ret;		//0
+};
+struct DETOUR_LIVE_SETTINGS {
+	REGISTERS	registers; //10
+	DWORD		flags; //c
+	DWORD		ret_addr; //8
+	DWORD		caller_ret; //4
+	DWORD		paramZero; //0
+};
+class GDetour {
+	public:
+		BYTE*		address;
+		bool		Applied;
 
-namespace GDetour {
-	struct DETOUR_PARAMS {
 		BYTE		original_code[32];
 		DWORD		original_code_len;
-		BYTE*		address;
+
 		//-----
 		CRITICAL_SECTION my_critical_section;
-		REGISTERS	registers;
-		DWORD		flags;
-		DWORD		caller_ret;
-		DWORD*		params;
+		DETOUR_LIVE_SETTINGS live_settings;
 		//------
-		int			bytes_to_pop_on_ret;
-		int			call_original_on_return;
-	};
-	struct DETOUR_GATEWAY_OPTIONS {
-		BYTE*		original_code;				//8
-		int			call_original_on_return;	//4
-		int			bytes_to_pop_on_ret;		//0
-	};
+		DETOUR_GATEWAY_OPTIONS gateway_opt;
 
-
-	extern std::map<BYTE*, DETOUR_PARAMS> detour_list;
-
-	GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, int type=0);
-	GENERIC_DETOUR_API bool remove_detour(BYTE* address);
-
-	GENERIC_DETOUR_API DETOUR_PARAMS* get_detour_settings(BYTE* address);
-
-	int detour_call_dest();
-	void detour_c_call_dest(DETOUR_GATEWAY_OPTIONS gateway_opt, REGISTERS registers, DWORD flags, DWORD ret_addr, DWORD caller_ret, DWORD param_zero);
-
-
+		bool Apply();
+		bool Unapply();
+		
+		GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, int type=0);
+		~GDetour();
 };
+typedef std::map<BYTE*, GDetour> detour_list_type;
+
+extern detour_list_type detours;
+
+GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, int type=0);
+GENERIC_DETOUR_API bool remove_detour(BYTE* address);
+GENERIC_DETOUR_API GDetour* getDetour(BYTE* address);
+
+
+int detour_call_dest(); //ASM function that is the jump target
+void detour_c_call_dest(DETOUR_GATEWAY_OPTIONS gateway_opt, DETOUR_LIVE_SETTINGS stack);
+
 
 DWORD CalculateRelativeJMP(DWORD jmp_address, DWORD jmp_destination, int jmp_operand_length=1);
 DWORD CalculateAbsoluteJMP(DWORD jmp_address, DWORD jmp_reldestination, int jmp_operand_length=1);
-
 
 GENERIC_DETOUR_API int test_detour_func(int count=0);
 GENERIC_DETOUR_API int stolen_detour_func(REGISTERS registers, DWORD flags, DWORD retaddr, DWORD params[]);

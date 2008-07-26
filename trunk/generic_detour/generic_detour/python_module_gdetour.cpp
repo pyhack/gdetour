@@ -194,24 +194,24 @@ PyObject* detour_setRegisters(PyObject* self, PyObject* args) {
 			&caller)) {
 		return NULL;
 	}
-	std::map<BYTE*, GDetour::DETOUR_PARAMS>::iterator dl = GDetour::detour_list.find(address);
-	if (dl == GDetour::detour_list.end()) {
+	detour_list_type::iterator dl = detours.find(address);
+	if (dl == detours.end()) {
 		return PyErr_Format(PyExc_LookupError, "%p is an invalid detoured address", address);
 	}
 
 
+	dl->second.live_settings.registers.eax = registers.eax;
+	dl->second.live_settings.registers.ecx = registers.ecx;
+	dl->second.live_settings.registers.edx = registers.edx;
+	dl->second.live_settings.registers.ebx = registers.ebx;
+	dl->second.live_settings.registers.esp = registers.esp;
+	dl->second.live_settings.registers.ebp = registers.ebp;
+	dl->second.live_settings.registers.esi = registers.esi;
+	dl->second.live_settings.registers.edi = registers.edi;
+	dl->second.live_settings.flags = flags;
+	dl->second.live_settings.caller_ret = caller;
 
-	dl->second.registers.eax = registers.eax;
-	dl->second.registers.ecx = registers.ecx;
-	dl->second.registers.edx = registers.edx;
-	dl->second.registers.ebx = registers.ebx;
-	dl->second.registers.esp = registers.esp;
-	dl->second.registers.ebp = registers.ebp;
-	dl->second.registers.esi = registers.esi;
-	dl->second.registers.edi = registers.edi;
-	dl->second.flags = flags;
-	dl->second.caller_ret = caller;
-	
+
 	return Py_BuildValue("i", true);
 }
 PyObject* detour_createDetour(PyObject* self, PyObject* args) {
@@ -224,7 +224,7 @@ PyObject* detour_createDetour(PyObject* self, PyObject* args) {
 		return NULL;
 	}
 
-	bool ret = GDetour::add_detour(address, overwrite_length, bytes_to_pop, type);
+	bool ret = add_detour(address, overwrite_length, bytes_to_pop, type);
 	
 	return Py_BuildValue("i", ret);
 
@@ -234,51 +234,49 @@ PyObject* detour_removeDetour(PyObject* self, PyObject* args) {
 	if (!PyArg_ParseTuple(args, "i", &address)) {
 		return NULL;
 	}
-	std::map<BYTE*, GDetour::DETOUR_PARAMS>::iterator dl = GDetour::detour_list.find(address);
-	if (dl == GDetour::detour_list.end()) {
+	detour_list_type::iterator dl = detours.find(address);
+	if (dl == detours.end()) {
 		return PyErr_Format(PyExc_LookupError, "Detour not found at %p", address);
 	}
 
-	bool r = GDetour::remove_detour(address);
+	bool r = remove_detour(address);
 	if (r == false) {
 		return PyErr_Format(Detour_Exception, "Unable to remove detour at %p", address);
 	}
 	return Py_BuildValue("i", true);
 }
 PyObject* detour_getDetourSettings(PyObject* self, PyObject* args) {
-	GDetour::DETOUR_PARAMS* dp;
+	
+	
 	BYTE* address;
 	if (!PyArg_ParseTuple(args, "i", &address)) {
 		return NULL;
 	}
 
-	dp = GDetour::get_detour_settings(address);
-	if (dp == NULL) {
+	GDetour* d = getDetour(address);
+	if (d == NULL) {
 		return PyErr_Format(PyExc_LookupError, "%p is an invalid detoured address", address);
 	}
-	return Py_BuildValue("(ii)", 
-		dp->bytes_to_pop_on_ret,
-		dp->call_original_on_return
+	return Py_BuildValue("(ii)",
+		d->gateway_opt.bytes_to_pop_on_ret,
+		d->gateway_opt.call_original_on_return
 	);
 }
 PyObject* detour_setDetourSettings(PyObject* self, PyObject* args) {
-	GDetour::DETOUR_PARAMS n;
-	GDetour::DETOUR_PARAMS* dp;
+	DETOUR_GATEWAY_OPTIONS n;
 	BYTE* address;
 	if (!PyArg_ParseTuple(args, "i(ii)", &address, 
-			&n.bytes_to_pop_on_ret, 
+			&n.bytes_to_pop_on_ret,
 			&n.call_original_on_return)
 			) {
 		return NULL;
 	}
-
-	dp = GDetour::get_detour_settings(address);
-	if (dp == NULL) {
+	GDetour* d = getDetour(address);
+	if (d == NULL) {
 		return PyErr_Format(PyExc_LookupError, "%p is an invalid detoured address", address);
 	}
-	
-	dp->bytes_to_pop_on_ret = n.bytes_to_pop_on_ret;
-	dp->call_original_on_return = n.call_original_on_return;
+	d->gateway_opt.bytes_to_pop_on_ret = n.bytes_to_pop_on_ret;
+	d->gateway_opt.call_original_on_return = n.call_original_on_return;
 
 	return Py_BuildValue("i", true);
 }
@@ -347,7 +345,7 @@ PyMODINIT_FUNC initgdetour() {
 
 
 
-void CallPythonDetour(std::map<BYTE*, GDetour::DETOUR_PARAMS>::iterator &dl, DWORD ret_addr, DWORD caller_ret) {
+void CallPythonDetour(GDetour d) {
 		/* ensure we hold the lock */
 
 	PyGILState_STATE state = Python_GrabGIL();
@@ -368,17 +366,17 @@ void CallPythonDetour(std::map<BYTE*, GDetour::DETOUR_PARAMS>::iterator &dl, DWO
 	OutputDebugString("Calling Function...\n");
 	PyObject* ret = PyEval_CallFunction(detour_pyfunc, 
 		"i(iiiiiiii)ii", 
-		ret_addr-5,
-		dl->second.registers.eax,
-		dl->second.registers.ecx,
-		dl->second.registers.edx,
-		dl->second.registers.ebx,
-		dl->second.registers.esp,
-		dl->second.registers.ebp,
-		dl->second.registers.esi,
-		dl->second.registers.edi,
-		dl->second.flags,
-		caller_ret - 5
+		d.live_settings.ret_addr-5,
+		d.live_settings.registers.eax,
+		d.live_settings.registers.ecx,
+		d.live_settings.registers.edx,
+		d.live_settings.registers.ebx,
+		d.live_settings.registers.esp,
+		d.live_settings.registers.ebp,
+		d.live_settings.registers.esi,
+		d.live_settings.registers.edi,
+		d.live_settings.flags,
+		d.live_settings.caller_ret - 5
 	);
 	if (PyErr_Occurred()) { PyErr_Print(); }
 
