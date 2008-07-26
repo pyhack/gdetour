@@ -3,7 +3,7 @@
 
 #include "stdafx.h"
 #include "generic_detour.h"
-#include "python_funcs.h"
+#include "python_module_gdetour.h"
 
 namespace GDetour {
 	std::map<BYTE*, DETOUR_PARAMS> detour_list;
@@ -160,51 +160,9 @@ void detour_c_call_dest(
 	//MessageBox(0,tempstring, "",0);
 	OutputDebugString(tempstring);
 
-	OutputDebugString("Trying to communicate with Python...\n");
+	CallPythonDetour(dl, ret_addr, caller_ret);
 
-	/* ensure we hold the lock */
-
-	PyGILState_STATE state = Python_GrabGIL();
-
-	PyObject* m = PyImport_AddModule("gdetour");
-
-	if (m == NULL) {
-		OutputDebugString("Can't call detour! module not in locals!\n");
-		goto pastPython;
-	}
-
-	PyObject* detour_pyfunc = PyObject_GetAttrString(m, "callback");
-
-	if (detour_pyfunc == NULL) {
-		OutputDebugString("Can't call detour! detour_pyfunc is null!\n");
-		goto pastPython;
-	}
-	OutputDebugString("Calling Function...\n");
-	PyObject* ret = PyEval_CallFunction(detour_pyfunc, 
-		"i(iiiiiiii)ii", 
-		ret_addr-5,
-		dl->second.registers.eax,
-		dl->second.registers.ecx,
-		dl->second.registers.edx,
-		dl->second.registers.ebx,
-		dl->second.registers.esp,
-		dl->second.registers.ebp,
-		dl->second.registers.esi,
-		dl->second.registers.edi,
-		dl->second.flags,
-		caller_ret - 5
-	);
-	if (PyErr_Occurred()) { PyErr_Print(); }
-
-	registers = dl->second.registers;
-
-	OutputDebugString("Done.\n");
-	Py_XDECREF(detour_pyfunc);
-	pastPython:
-
-	/* Restore the state of Python */
-	Python_ReleaseGIL(state);
-
+	registers = dl->second.registers; //Copy the temporary registers back to the stack
 	
 	
 	LeaveCriticalSection(&dl->second.my_critical_section);

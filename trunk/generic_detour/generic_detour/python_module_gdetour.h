@@ -1,1 +1,4 @@
-//I guess I don't really define anything noteworthy
+#include <map>
+#include "generic_detour.h"
+
+void CallPythonDetour(std::map<BYTE*, GDetour::DETOUR_PARAMS>::iterator &dl, DWORD ret_Addr, DWORD caller_ret);

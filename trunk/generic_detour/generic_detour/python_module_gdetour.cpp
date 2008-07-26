@@ -333,3 +333,61 @@ PyMODINIT_FUNC initgdetour() {
 	add_module_type_detourconfig(m);
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void CallPythonDetour(std::map<BYTE*, GDetour::DETOUR_PARAMS>::iterator &dl, DWORD ret_addr, DWORD caller_ret) {
+		/* ensure we hold the lock */
+
+	PyGILState_STATE state = Python_GrabGIL();
+
+	PyObject* m = PyImport_AddModule("gdetour");
+
+	if (m == NULL) {
+		OutputDebugString("Can't call detour! module not in locals!\n");
+		goto pastPython;
+	}
+
+	PyObject* detour_pyfunc = PyObject_GetAttrString(m, "callback");
+
+	if (detour_pyfunc == NULL) {
+		OutputDebugString("Can't call detour! detour_pyfunc is null!\n");
+		goto pastPython;
+	}
+	OutputDebugString("Calling Function...\n");
+	PyObject* ret = PyEval_CallFunction(detour_pyfunc, 
+		"i(iiiiiiii)ii", 
+		ret_addr-5,
+		dl->second.registers.eax,
+		dl->second.registers.ecx,
+		dl->second.registers.edx,
+		dl->second.registers.ebx,
+		dl->second.registers.esp,
+		dl->second.registers.ebp,
+		dl->second.registers.esi,
+		dl->second.registers.edi,
+		dl->second.flags,
+		caller_ret - 5
+	);
+	if (PyErr_Occurred()) { PyErr_Print(); }
+
+
+	OutputDebugString("Done.\n");
+	Py_XDECREF(detour_pyfunc);
+	pastPython:
+
+	/* Restore the state of Python */
+	Python_ReleaseGIL(state);
+
+}
