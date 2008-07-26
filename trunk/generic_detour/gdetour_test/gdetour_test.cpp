@@ -42,12 +42,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (a) {
 		printf("You detoured the first call to return true! You sneaky bastard!\n");
 	} else {
-		printf("You detoured the first call return false as usual.\n");
+		printf("You (may have) detoured the first call return false as usual.\n");
 	}
 	if (b) {
 		printf("You detoured the second call to return true! You sneaky bastard!\n");
 	} else {
-		printf("You detoured the second call return false as usual.\n");
+		printf("You (may have) detoured the second call return false as usual.\n");
 	}
 	return 0;
 }

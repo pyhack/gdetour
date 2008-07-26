@@ -205,6 +205,18 @@
 				>
 			</File>
 			<File
+				RelativePath=".\python_module_gdetour.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\python_type_detourconfig.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\python_type_registers.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\stdafx.cpp"
 				>
 				<FileConfiguration
@@ -236,6 +248,18 @@
 			</File>
 			<File
 				RelativePath=".\python_funcs.h"
+				>
+			</File>
+			<File
+				RelativePath=".\python_module_gdetour.h"
+				>
+			</File>
+			<File
+				RelativePath=".\python_type_detourconfig.h"
+				>
+			</File>
+			<File
+				RelativePath=".\python_type_registers.h"
 				>
 			</File>
 			<File
