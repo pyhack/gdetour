@@ -41,7 +41,7 @@ GDetour::GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, int type
 
 bool GDetour::Apply() {
 	if (this->Applied) {
-		return true;
+		return false;
 	}
 
 	DWORD oldProt = 0;
@@ -62,10 +62,12 @@ bool GDetour::Apply() {
 	VirtualProtect(this->address, this->original_code_len, oldProt, &dummy);
 
 	this->Applied = true;
+
+	return true;
 }
 bool GDetour::Unapply() {
 	if (!this->Applied) {
-		return true;
+		return false;
 	}
 	DWORD oldProt = 0;
 	DWORD dummy = 0;
@@ -73,6 +75,7 @@ bool GDetour::Unapply() {
 	memcpy(this->address, &this->original_code, this->original_code_len);
 	VirtualProtect(this->address, this->original_code_len, oldProt, &dummy);
 	this->Applied = false;
+	return true;
 }
 GDetour::~GDetour() {
 	if (this->Applied) {
