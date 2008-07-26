@@ -36,7 +36,7 @@ GDetour::GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, int type
 	DWORD* retJmp = (DWORD*)&this->original_code[this->original_code_len+1];
 	*retJmp = CalculateRelativeJMP((DWORD)&this->original_code[this->original_code_len], (DWORD) (this->address + this->original_code_len));
 
-
+	this->Apply();
 }
 
 bool GDetour::Apply() {
@@ -83,21 +83,16 @@ GDetour::~GDetour() {
 
 
 GENERIC_DETOUR_API bool remove_detour(BYTE* address) {
-	detour_list_type::iterator dl = detours.find(address);
-	if (dl == detours.end()) {
+	GDetour* d = getDetour(address);
+	if (d == NULL) {
 		return false;
 	}
-	int overwrite_length = dl->second.original_code_len;
-	DWORD oldProt = 0;
-	DWORD dummy = 0;
-	VirtualProtect(address, overwrite_length, PAGE_EXECUTE_READWRITE, &oldProt);
-	memcpy(address, &dl->second.original_code, overwrite_length);
-	VirtualProtect(address, overwrite_length, oldProt, &dummy);
-	detours.erase(dl);
+	d->Unapply();
+	detours.erase(address);
 	return true;
 }
 GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, int type) {
-
+	detours.insert(std::pair<BYTE*,GDetour*>(address, new GDetour(address, overwrite_length, bytes_to_pop, type)));
 	return true;
 };
 
@@ -146,7 +141,7 @@ void detour_c_call_dest(
 		return;
 	}
 
-	GDetour &d = dl->second;
+	GDetour &d = *dl->second;
 
 	EnterCriticalSection(&d.my_critical_section);
 
@@ -174,11 +169,11 @@ void detour_c_call_dest(
 	//MessageBox(0,tempstring, "",0);
 	OutputDebugString(tempstring);
 
-	CallPythonDetour(d);
+	CallPythonDetour(&d);
 
 	stack = d.live_settings; //Copy the temporary live settings back to the stack
 	
-	LeaveCriticalSection(&dl->second.my_critical_section);
+	LeaveCriticalSection(&d.my_critical_section);
 
 }
 
@@ -187,7 +182,7 @@ GENERIC_DETOUR_API GDetour* getDetour(BYTE* address) {
 	if (dl == detours.end()) {
 		return NULL;
 	}
-	return &dl->second;
+	return dl->second;
 }
 GENERIC_DETOUR_API int test_detour_func(int count) {
 	MessageBox(0, "I'm the real test_detour_func!", "Caption", 0);

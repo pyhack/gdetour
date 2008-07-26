@@ -55,7 +55,7 @@ class GDetour {
 		GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, int type=0);
 		~GDetour();
 };
-typedef std::map<BYTE*, GDetour> detour_list_type;
+typedef std::map<BYTE*, GDetour*> detour_list_type;
 
 extern detour_list_type detours;
 

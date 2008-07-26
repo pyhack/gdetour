@@ -194,22 +194,23 @@ PyObject* detour_setRegisters(PyObject* self, PyObject* args) {
 			&caller)) {
 		return NULL;
 	}
-	detour_list_type::iterator dl = detours.find(address);
-	if (dl == detours.end()) {
+	GDetour* dt = getDetour(address);
+	if (dt == NULL) {
 		return PyErr_Format(PyExc_LookupError, "%p is an invalid detoured address", address);
 	}
 
+	GDetour &d = *dt;
 
-	dl->second.live_settings.registers.eax = registers.eax;
-	dl->second.live_settings.registers.ecx = registers.ecx;
-	dl->second.live_settings.registers.edx = registers.edx;
-	dl->second.live_settings.registers.ebx = registers.ebx;
-	dl->second.live_settings.registers.esp = registers.esp;
-	dl->second.live_settings.registers.ebp = registers.ebp;
-	dl->second.live_settings.registers.esi = registers.esi;
-	dl->second.live_settings.registers.edi = registers.edi;
-	dl->second.live_settings.flags = flags;
-	dl->second.live_settings.caller_ret = caller;
+	d.live_settings.registers.eax = registers.eax;
+	d.live_settings.registers.ecx = registers.ecx;
+	d.live_settings.registers.edx = registers.edx;
+	d.live_settings.registers.ebx = registers.ebx;
+	d.live_settings.registers.esp = registers.esp;
+	d.live_settings.registers.ebp = registers.ebp;
+	d.live_settings.registers.esi = registers.esi;
+	d.live_settings.registers.edi = registers.edi;
+	d.live_settings.flags = flags;
+	//d.live_settings.caller_ret = caller;
 
 
 	return Py_BuildValue("i", true);
@@ -345,7 +346,7 @@ PyMODINIT_FUNC initgdetour() {
 
 
 
-void CallPythonDetour(GDetour d) {
+void CallPythonDetour(GDetour* d) {
 		/* ensure we hold the lock */
 
 	PyGILState_STATE state = Python_GrabGIL();
@@ -366,17 +367,17 @@ void CallPythonDetour(GDetour d) {
 	OutputDebugString("Calling Function...\n");
 	PyObject* ret = PyEval_CallFunction(detour_pyfunc, 
 		"i(iiiiiiii)ii", 
-		d.live_settings.ret_addr-5,
-		d.live_settings.registers.eax,
-		d.live_settings.registers.ecx,
-		d.live_settings.registers.edx,
-		d.live_settings.registers.ebx,
-		d.live_settings.registers.esp,
-		d.live_settings.registers.ebp,
-		d.live_settings.registers.esi,
-		d.live_settings.registers.edi,
-		d.live_settings.flags,
-		d.live_settings.caller_ret - 5
+		d->live_settings.ret_addr-5,
+		d->live_settings.registers.eax,
+		d->live_settings.registers.ecx,
+		d->live_settings.registers.edx,
+		d->live_settings.registers.ebx,
+		d->live_settings.registers.esp,
+		d->live_settings.registers.ebp,
+		d->live_settings.registers.esi,
+		d->live_settings.registers.edi,
+		d->live_settings.flags,
+		d->live_settings.caller_ret - 5
 	);
 	if (PyErr_Occurred()) { PyErr_Print(); }
 
