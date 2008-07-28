@@ -3,14 +3,16 @@
 
 #include "python_type_registers.h"
 
+using namespace CPPPython;
 
-
-PyObject* myPyGlobals;
-PyObject* myPyLocals;
+PDict pyLocals = NULL;
+PDict pyGlobals = NULL;
+//PyObject* myPyGlobals;
+//PyObject* myPyLocals;
 
 GENERIC_DETOUR_API PyObject* run_python_string(char* pycode) {
 	PyGILState_STATE state = Python_GrabGIL();
-	PyObject* ret = PyRun_String(pycode, Py_single_input, myPyGlobals, myPyLocals);	
+	PyObject* ret = PyRun_String(pycode, Py_single_input, pyGlobals, pyLocals);	
 	if (PyErr_Occurred()) {
 		OutputDebugString("error occured running pystring");
 		PyErr_Print();
@@ -50,7 +52,7 @@ GENERIC_DETOUR_API int run_python_file(char* filename) {
 	}
 
 	FILE* f = PyFile_AsFile(pyfile);
-	PyRun_File(f,fnbuf, Py_file_input, myPyGlobals, myPyLocals);
+	PyRun_File(f,fnbuf, Py_file_input, pyGlobals, pyLocals);
 
 	if (PyErr_Occurred()) {
 		//probably an exception
@@ -91,11 +93,8 @@ void Python_Initialize() {
 	PyObject* mainmod = PyImport_AddModule("__main__"); //borrowed ref
 	PyObject* d = PyModule_GetDict(mainmod); //borrowed ref
 
-	Py_INCREF(d);
-	Py_INCREF(d);
-
-	myPyGlobals = d;
-	myPyLocals = d;
+	pyGlobals = PDict(d);
+	pyLocals = PDict(d);
 
 	//Init_gdetour();
 
@@ -106,16 +105,15 @@ void Python_Initialize() {
 void Python_Unload() {
 	PyGILState_STATE state = Python_GrabGIL();
 
-	Py_XDECREF(myPyGlobals);
-	Py_XDECREF(myPyLocals);
+
 
 	//Py_XDECREF(Detour_Exception_AccessViolation);
 	//Py_XDECREF(Detour_Exception_WindowsException);
 	//Py_XDECREF(Detour_Exception);
 
 
-	myPyGlobals = NULL;
-	myPyLocals = NULL;
+	pyGlobals = NULL;
+	pyLocals = NULL;
 
 	Py_Finalize();
 

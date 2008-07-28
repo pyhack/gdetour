@@ -6,10 +6,14 @@
 #define GENERIC_DETOUR_API extern "C" __declspec(dllimport)
 #endif
 
+#include "CPPPython.h"
+
 //extern PyThreadState* mainPythonThreadState;
 
-extern PyObject* myPyGlobals;
-extern PyObject* myPyLocals;
+//extern PyObject* myPyGlobals;
+//extern PyObject* myPyLocals;
+extern CPPPython::PDict pyLocals;
+extern CPPPython::PDict pyGlobals;
 
 GENERIC_DETOUR_API void run_test();
 
@@ -21,3 +25,5 @@ void Python_Unload();
 
 PyGILState_STATE Python_GrabGIL();
 void Python_ReleaseGIL(PyGILState_STATE);
+
+
