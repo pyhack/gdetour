@@ -23,7 +23,6 @@ GENERIC_DETOUR_API int run_python_file(char* filename);
 void Python_Initialize();
 void Python_Unload();
 
-PyGILState_STATE Python_GrabGIL();
-void Python_ReleaseGIL(PyGILState_STATE);
+
 
 

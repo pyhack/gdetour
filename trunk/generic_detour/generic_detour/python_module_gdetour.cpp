@@ -8,6 +8,8 @@
 
 #include "generic_detour.h"
 
+using namespace CPPPython;
+
 PyObject* Detour_Exception;
 PyObject* Detour_Exception_AlreadyInitilized;
 PyObject* Detour_Exception_WindowsException;
@@ -227,7 +229,10 @@ PyObject* detour_createDetour(PyObject* self, PyObject* args) {
 
 	bool ret = add_detour(address, overwrite_length, bytes_to_pop, type);
 	
-	return Py_BuildValue("i", ret);
+	if (ret) {
+		Py_RETURN_TRUE;
+	}
+	Py_RETURN_FALSE;
 
 }
 PyObject* detour_removeDetour(PyObject* self, PyObject* args) {
@@ -244,7 +249,7 @@ PyObject* detour_removeDetour(PyObject* self, PyObject* args) {
 	if (r == false) {
 		return PyErr_Format(Detour_Exception, "Unable to remove detour at %p", address);
 	}
-	return Py_BuildValue("i", true);
+	Py_RETURN_TRUE;
 }
 PyObject* detour_getDetourSettings(PyObject* self, PyObject* args) {
 	
@@ -317,16 +322,21 @@ PyMODINIT_FUNC initgdetour() {
 	Detour_Exception_WindowsException = PyErr_NewException("gdetour.DetourWindowsException", Detour_Exception, NULL);
 	Detour_Exception_AccessViolation = PyErr_NewException("gdetour.DetourAccessViolationException", Detour_Exception_WindowsException, NULL);
 
+	PModule pm = PModule(m);
+	pm.AddObject("DetourException", Detour_Exception);
+	pm.AddObject("DetourExceptionAlreadyInitilized", Detour_Exception_AlreadyInitilized);
+	pm.AddObject("DetourWindowsException", Detour_Exception_WindowsException);
+	pm.AddObject("DetourAccessViolationException", Detour_Exception_AccessViolation);
 
-	Py_INCREF(Detour_Exception);
-	Py_INCREF(Detour_Exception_AlreadyInitilized);
-	Py_INCREF(Detour_Exception_WindowsException);
-	Py_INCREF(Detour_Exception_AccessViolation);
+	//Py_INCREF(Detour_Exception);
+	//Py_INCREF(Detour_Exception_AlreadyInitilized);
+	//Py_INCREF(Detour_Exception_WindowsException);
+	//Py_INCREF(Detour_Exception_AccessViolation);
 
-	PyModule_AddObject(m, "DetourException", Detour_Exception);
-	PyModule_AddObject(m, "DetourExceptionAlreadyInitilized", Detour_Exception_AlreadyInitilized);
-	PyModule_AddObject(m, "DetourWindowsException", Detour_Exception_WindowsException);
-	PyModule_AddObject(m, "DetourAccessViolationException", Detour_Exception_AccessViolation);
+	//PyModule_AddObject(m, "DetourException", Detour_Exception);
+	//PyModule_AddObject(m, "DetourExceptionAlreadyInitilized", Detour_Exception_AlreadyInitilized);
+	//PyModule_AddObject(m, "DetourWindowsException", Detour_Exception_WindowsException);
+	//PyModule_AddObject(m, "DetourAccessViolationException", Detour_Exception_AccessViolation);
 
 	add_module_type_registers(m);
 	add_module_type_detourconfig(m);
@@ -348,21 +358,21 @@ PyMODINIT_FUNC initgdetour() {
 
 void CallPythonDetour(GDetour* d) {
 		/* ensure we hold the lock */
+	P_GIL gil;
 
-	PyGILState_STATE state = Python_GrabGIL();
 
 	PyObject* m = PyImport_AddModule("gdetour");
 
 	if (m == NULL) {
 		OutputDebugString("Can't call detour! module not in locals!\n");
-		goto pastPython;
+		return;
 	}
 
 	PyObject* detour_pyfunc = PyObject_GetAttrString(m, "callback");
 
 	if (detour_pyfunc == NULL) {
 		OutputDebugString("Can't call detour! detour_pyfunc is null!\n");
-		goto pastPython;
+		return;
 	}
 	OutputDebugString("Calling Function...\n");
 	PyObject* ret = PyEval_CallFunction(detour_pyfunc, 
@@ -384,9 +394,5 @@ void CallPythonDetour(GDetour* d) {
 
 	OutputDebugString("Done.\n");
 	Py_XDECREF(detour_pyfunc);
-	pastPython:
-
-	/* Restore the state of Python */
-	Python_ReleaseGIL(state);
 
 }

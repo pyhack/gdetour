@@ -28,13 +28,15 @@ namespace CPPPython {
 	}
 
 	P_GIL::P_GIL() {
+		if (!Py_IsInitialized()) {
+			OutputDebugString("Grabbing GIL from uninitilized Python?!");
+		}
 		this->state = PyGILState_Ensure();
 	}
 	P_GIL::~P_GIL() {
-		if (this->state == NULL) {
-			return;
+		if (::Py_IsInitialized()) {
+			PyGILState_Release(state);
 		}
-		PyGILState_Release(state);
 	}
 
 	PObject::PObject() {
@@ -102,6 +104,59 @@ namespace CPPPython {
 		}
 		return true;
 	}
+
+
+
+
+
+	PObject PObject::getAttr(char* attr) {
+		if (!this->myObject) { throw new NULLPyObjectException(); }
+		PyObject* ret = ::PyObject_GetAttrString(this->myObject, attr);
+		return PObject(ret, true);
+	}
+	PObject PObject::getAttr(PyObject* attr) {
+		if (!this->myObject) { throw new NULLPyObjectException(); }
+		PyObject* ret = ::PyObject_GetAttr(this->myObject, attr);
+		return PObject(ret, true);
+	}
+
+	bool PObject::setAttr(const char* attr, PyObject* value) {
+		if (!this->myObject) { throw new NULLPyObjectException(); }
+		if (::PyObject_SetAttrString(this->myObject, attr, value) == -1) {
+			return false;
+		}
+		return true;
+	}
+	bool PObject::setAttr(PyObject* attr, PyObject* value) {
+		if (!this->myObject) { throw new NULLPyObjectException(); }
+		if (::PyObject_SetAttr(this->myObject, attr, value) == -1) {
+			return false;
+		}
+		return true;
+	}
+
+	bool PObject::delAttr(const char* attr) {
+		if (!this->myObject) { throw new NULLPyObjectException(); }
+		if (::PyObject_DelAttrString(this->myObject, attr) == -1) {
+			return false;
+		}
+		return true;
+	}
+	bool PObject::delAttr(PyObject* attr) {
+		if (!this->myObject) { throw new NULLPyObjectException(); }
+		if (::PyObject_DelAttr(this->myObject, attr) == -1) {
+			return false;
+		}
+		return true;
+	}
+
+
+
+
+
+
+
+
 	bool PObject::isCallable() {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		if (::PyCallable_Check(this->myObject) == 0) {

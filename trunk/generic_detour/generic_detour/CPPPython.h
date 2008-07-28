@@ -11,7 +11,13 @@ namespace CPPPython {
 	public: NULLPyObjectException();
 	};
 	class P_GIL {
+		//P_GIL is designed to make management of the GIL even easier.
+		//Just declare a type of it in the block you want to use Python code in
+		//and it will take care of everything else:
+		//
+		//P_GIL gil;
 		PyGILState_STATE state;
+	public:
 		P_GIL();
 		~P_GIL();
 	};
@@ -36,6 +42,17 @@ namespace CPPPython {
 //----------------
 			bool hasAttr(char* attr);
 			bool hasAttr(PyObject* attr);
+
+			PObject getAttr(char* attr);
+			PObject getAttr(PyObject* attr);
+
+			bool setAttr(const char* attr, PyObject* value);
+			bool setAttr(PyObject* attr, PyObject* value);
+    
+			bool delAttr(const char* attr);
+			bool delAttr(PyObject* attr);
+
+
 			bool isCallable();
 			PObject PObject_Call(PyObject* args, ...); //A NULL argument MUST BE PASSED at the end!
 	};

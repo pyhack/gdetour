@@ -11,13 +11,13 @@ PDict pyGlobals = NULL;
 //PyObject* myPyLocals;
 
 GENERIC_DETOUR_API PyObject* run_python_string(char* pycode) {
-	PyGILState_STATE state = Python_GrabGIL();
+	P_GIL gil;
+
 	PyObject* ret = PyRun_String(pycode, Py_single_input, pyGlobals, pyLocals);	
 	if (PyErr_Occurred()) {
 		OutputDebugString("error occured running pystring");
 		PyErr_Print();
 	}
-	Python_ReleaseGIL(state);
 	return ret;
 }
 GENERIC_DETOUR_API int run_python_file(char* filename) {
@@ -38,7 +38,8 @@ GENERIC_DETOUR_API int run_python_file(char* filename) {
 		strncpy(fnbuf, filename, 1023);
 	}
 
-	PyGILState_STATE state = Python_GrabGIL();
+	P_GIL gil;
+
 	PyObject* pyfile = PyFile_FromString(fnbuf,"r");
 	if (PyErr_Occurred()) { 
 		PyErr_Print(); 
@@ -47,7 +48,6 @@ GENERIC_DETOUR_API int run_python_file(char* filename) {
 	if(pyfile==NULL){
 		OutputDebugString("pyfile is null");
 		Py_XDECREF(pyfile);
-		Python_ReleaseGIL(state);
 		return 0;
 	}
 
@@ -59,12 +59,10 @@ GENERIC_DETOUR_API int run_python_file(char* filename) {
 		OutputDebugString("pyerror occured running file");
 		PyErr_Print();
 		Py_XDECREF(pyfile);
-		Python_ReleaseGIL(state);
 		return 0;
 	}
 
 	Py_DECREF(pyfile);
-	Python_ReleaseGIL(state);
 	return 1;
 }
 
@@ -88,7 +86,6 @@ void Python_Initialize() {
 		OutputDebugString("Python could not be initilized\n");
 	}
 	PyEval_InitThreads();
-	//mainPythonThreadState = PyThreadState_Get();
 
 	PyObject* mainmod = PyImport_AddModule("__main__"); //borrowed ref
 	PyObject* d = PyModule_GetDict(mainmod); //borrowed ref
@@ -103,38 +100,11 @@ void Python_Initialize() {
 	//PyEval_ReleaseLock();
 }
 void Python_Unload() {
-	PyGILState_STATE state = Python_GrabGIL();
-
-
-
-	//Py_XDECREF(Detour_Exception_AccessViolation);
-	//Py_XDECREF(Detour_Exception_WindowsException);
-	//Py_XDECREF(Detour_Exception);
-
+	P_GIL gil;
 
 	pyGlobals = NULL;
 	pyLocals = NULL;
 
 	Py_Finalize();
 
-}
-
-
-PyGILState_STATE Python_GrabGIL() {
-	PyGILState_STATE state = PyGILState_Ensure();
-	return state;
-/*
-	PyEval_AcquireLock();
-	PyInterpreterState* s = mainPythonThreadState->interp;
-
-	PyThreadState* myThreadState = PyThreadState_New(s);
-
-	PyThreadState_Swap(myThreadState);
-	*/
-}
-void Python_ReleaseGIL(PyGILState_STATE state) {
-	if (state == NULL) {
-		return;
-	}
-	PyGILState_Release(state);
 }
