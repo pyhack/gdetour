@@ -33,18 +33,20 @@ namespace CPPPython {
 			bool del_on_destruct;
 
 			PObject& operator =(const PObject& p); //assignment operator
-			operator PyObject*(); //autocast to PyObject*
-			operator bool(); //is this not pointing to NULL
+			operator PyObject*() const; //autocast to PyObject*
+			operator bool() const; //is this not pointing to NULL
 
-			PyObject* getObject();
-
+			PyObject* getObject() const;
+			//Technically speaking, almost all of these methods could be const, as the 
+			//mutation occurs on the PyObject*, not on this class. However, I've only
+			//defined const where it makes logical sense (ie, on get instead of set)
 
 //----------------
-			bool hasAttr(char* attr);
-			bool hasAttr(PyObject* attr);
+			bool hasAttr(char* attr) const;
+			bool hasAttr(PyObject* attr) const;
 
-			PObject getAttr(char* attr);
-			PObject getAttr(PyObject* attr);
+			PObject getAttr(char* attr) const;
+			PObject getAttr(PyObject* attr) const;
 
 			bool setAttr(const char* attr, PyObject* value);
 			bool setAttr(PyObject* attr, PyObject* value);
@@ -53,7 +55,7 @@ namespace CPPPython {
 			bool delAttr(PyObject* attr);
 
 
-			bool isCallable();
+			bool isCallable() const;
 			PObject PObject_Call(PyObject* args, ...); //A NULL argument MUST BE PASSED at the end!
 	};
 //--------------------
@@ -89,13 +91,13 @@ namespace CPPPython {
 		public:
 			PMapping(PyObject* obj, bool stealReferance = false);
 
-			bool HasKey(char* key);
-			bool HasKey(PyObject* key);
+			bool HasKey(char* key) const;
+			bool HasKey(PyObject* key) const;
 
 			bool DelItem(char* key);
 			bool DelItem(PyObject* key);
 
-			PObject GetItem(char* key);
+			PObject GetItem(char* key) const;
 			bool SetItem(char* key, PyObject* value);
 	};
 	class PDict: public PObject {
@@ -103,13 +105,13 @@ namespace CPPPython {
 			PDict(PyObject* obj, bool stealReferance = false);
 
 			static PDict getNewDict();
-			bool Contains(char* key);
-			bool Contains(PyObject* key);
+			bool Contains(char* key) const;
+			bool Contains(PyObject* key) const;
 
 			bool DelItem(char* key);
 			bool DelItem(PyObject* key);
 
-			PObject GetItem(char* key);
+			PObject GetItem(char* key) const;
 			bool SetItem(char* key, PyObject* value);
 	};
 };

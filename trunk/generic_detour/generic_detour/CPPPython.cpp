@@ -76,28 +76,28 @@ namespace CPPPython {
 		}
 		return *this;
 	}
-	PObject::operator bool() {
+	PObject::operator bool() const {
 		return (this->myObject != NULL);
 	}
-	PObject::operator PyObject*() {
+	PObject::operator PyObject*() const {
 		if (this->myObject == NULL) {
 			throw new CPPPythonException("Implicit conversion to a NULL PyObject prevented");
 		}
 		return this->myObject;
 	}
-	PyObject* PObject::getObject() {
+	PyObject* PObject::getObject() const {
 		return this->myObject;
 	}
 
 	//-----------
-	bool PObject::hasAttr(PyObject* attr) {
+	bool PObject::hasAttr(PyObject* attr) const {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		if (::PyObject_HasAttr(this->myObject, attr) == 0) {
 			return false;
 		}
 		return true;
 	}
-	bool PObject::hasAttr(char* attr) {
+	bool PObject::hasAttr(char* attr) const {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		if (::PyObject_HasAttrString(this->myObject, attr) == 0) {
 			return false;
@@ -109,12 +109,12 @@ namespace CPPPython {
 
 
 
-	PObject PObject::getAttr(char* attr) {
+	PObject PObject::getAttr(char* attr) const {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		PyObject* ret = ::PyObject_GetAttrString(this->myObject, attr);
 		return PObject(ret, true);
 	}
-	PObject PObject::getAttr(PyObject* attr) {
+	PObject PObject::getAttr(PyObject* attr) const {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		PyObject* ret = ::PyObject_GetAttr(this->myObject, attr);
 		return PObject(ret, true);
@@ -157,7 +157,7 @@ namespace CPPPython {
 
 
 
-	bool PObject::isCallable() {
+	bool PObject::isCallable() const {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		if (::PyCallable_Check(this->myObject) == 0) {
 			return false;
@@ -290,7 +290,7 @@ namespace CPPPython {
 		}
 		this->myObject = obj;
 	}
-	bool PMapping::HasKey(char* key) {
+	bool PMapping::HasKey(char* key) const {
 		if (!this->myObject) {
 			throw new NULLPyObjectException();
 		}
@@ -299,7 +299,7 @@ namespace CPPPython {
 		}
 		return true;
 	}
-	bool PMapping::HasKey(PyObject* key) {
+	bool PMapping::HasKey(PyObject* key) const {
 		if (!this->myObject) {
 			throw new NULLPyObjectException();
 		}
@@ -322,7 +322,7 @@ namespace CPPPython {
 		}
 		return true;
 	}
-	PObject PMapping::GetItem(char* key) {
+	PObject PMapping::GetItem(char* key) const {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		PyObject* ret = ::PyMapping_GetItemString(this->myObject, key);
 		return PObject(ret, true);
@@ -348,14 +348,14 @@ namespace CPPPython {
 		}
 		this->myObject = obj;
 	}
-	bool PDict::Contains(PyObject* key) {
+	bool PDict::Contains(PyObject* key) const {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		if (::PyDict_Contains(this->myObject, key) == 1) {
 			return true;
 		}
 		return false;
 	}
-	bool PDict::Contains(char* key) {
+	bool PDict::Contains(char* key) const {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		PString str = PString(key);
 		return this->Contains(str);
@@ -374,7 +374,7 @@ namespace CPPPython {
 		}
 		return true;
 	}
-	PObject PDict::GetItem(char* key) {
+	PObject PDict::GetItem(char* key) const {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		PyObject* ret = ::PyDict_GetItemString(this->myObject, key);
 		return PObject(ret, true);
