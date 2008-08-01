@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "python_module_gdetour.h"
+#include "python_module_util.h"
 #include "python_funcs.h"
 #include "python_type_registers.h"
 #include "python_type_detourconfig.h"
@@ -15,152 +16,7 @@ PyObject* Detour_Exception_AlreadyInitilized;
 PyObject* Detour_Exception_WindowsException;
 PyObject* Detour_Exception_AccessViolation;
 
-PyObject* detour_loadPythonFile(PyObject* self, PyObject* args) {
-	char* filename;
-	if (!PyArg_ParseTuple(args, "s", &filename)) {
-		return NULL;
-	}
-	int ret = run_python_file(filename);
-	if (ret == 0) {
-		return PyErr_Format(PyExc_IOError, "%s is an invalid filename", filename);
-	}
-	return Py_BuildValue("i", ret);
-}
-PyObject* detour_WriteMemory(PyObject* self, PyObject* args) {
-	char* address;
-	char* bytes;
-	int bytenum;
 
-	if (!PyArg_ParseTuple(args, "is#", &address, &bytes, &bytenum)) {
-		return NULL;
-	}
-	DWORD oldProt;
-	DWORD dummy;
-	__try {
-		VirtualProtect(address, bytenum, PAGE_EXECUTE_READWRITE, &oldProt);
-		memcpy(address, bytes, bytenum);
-		VirtualProtect(address, bytenum, oldProt, &dummy);
-	} __except(1) {
-		if (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) {
-			return PyErr_Format(Detour_Exception_AccessViolation, "%p is an invalid memory address (Access Violation)", address);
-		}
-		return PyErr_Format(Detour_Exception_WindowsException, "%p is an invalid memory address (Windows Exception %d)", address, GetExceptionCode());
-	}
-
-	return Py_BuildValue("i", true);
-}
-PyObject* detour_WriteByte(PyObject* self, PyObject* args) {
-	char* address;
-	char bytes;
-	if (!PyArg_ParseTuple(args, "ic", &address, &bytes)) {
-		return NULL;
-	}
-	DWORD oldProt;
-	DWORD dummy;
-	__try {
-		VirtualProtect(address, 1, PAGE_EXECUTE_READWRITE, &oldProt);
-		memcpy(address, &bytes, 1);
-		VirtualProtect(address, 1, oldProt, &dummy);
-	} __except(1) {
-		if (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) {
-			return PyErr_Format(Detour_Exception_AccessViolation, "%p is an invalid memory address (Access Violation)", address);
-		}
-		return PyErr_Format(Detour_Exception_WindowsException, "%p is an invalid memory address (Windows Exception %d)", address, GetExceptionCode());
-	}
-
-	return Py_BuildValue("i", true);
-}
-PyObject* detour_WriteDWORD(PyObject* self, PyObject* args) {
-	char* address;
-	DWORD bytes;
-	if (!PyArg_ParseTuple(args, "ii", &address, &bytes)) {
-		return NULL;
-	}
-	DWORD oldProt;
-	DWORD dummy;
-	__try {
-		VirtualProtect(address, 4, PAGE_EXECUTE_READWRITE, &oldProt);
-		memcpy(address, &bytes, 4);
-		VirtualProtect(address, 4, oldProt, &dummy);
-	} __except(1) {
-		if (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) {
-			return PyErr_Format(Detour_Exception_AccessViolation, "%p is an invalid memory address (Access Violation)", address);
-		}
-		return PyErr_Format(Detour_Exception_WindowsException, "%p is an invalid memory address (Windows Exception %d)", address, GetExceptionCode());
-	}
-	return Py_BuildValue("i", true);
-}
-PyObject* detour_ReadASCIIZ(PyObject* self, PyObject* args) {
-	char* address;
-
-	if (!PyArg_ParseTuple(args, "i", &address)) {
-		return NULL;
-	}
-	__try {
-		if (address == NULL) {
-			int x = *(int*)0x0; //Python won't cause the access violation, it'll return None instead
-		}
-		return Py_BuildValue("s", address);
-	} __except(1) {
-		if (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) {
-			return PyErr_Format(Detour_Exception_AccessViolation, "%p is an invalid memory address (Access Violation)", address);
-		}
-		return PyErr_Format(Detour_Exception_WindowsException, "%p is an invalid memory address (Windows Exception %d)", address, GetExceptionCode());
-	}
-}
-PyObject* detour_ReadMemory(PyObject* self, PyObject* args) {
-	char* address;
-	int bytes;
-
-	if (!PyArg_ParseTuple(args, "ii", &address, &bytes)) {
-		return NULL;
-	}
-	__try {
-		if (address == NULL) {
-			int x = *(int*)0x0; //Python won't cause the access violation, it'll return None instead
-		}
-		return Py_BuildValue("s#", address, bytes);
-	} __except(1) {
-		if (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) {
-			return PyErr_Format(Detour_Exception_AccessViolation, "%p is an invalid memory address (Access Violation)", address);
-		}
-		return PyErr_Format(Detour_Exception_WindowsException, "%p is an invalid memory address (Windows Exception %d)", address, GetExceptionCode());
-	}
-
-}
-PyObject* detour_ReadByte(PyObject* self, PyObject* args) {
-	char* address;
-
-	if (!PyArg_ParseTuple(args, "i", &address)) {
-		return NULL;
-	}
-	__try {
-		if (address == NULL) {
-			int x = *(int*)0x0; //Python won't cause the access violation, it'll return None instead
-		}
-		return Py_BuildValue("s#", address, 1);
-	} __except(1) {
-		if (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) {
-			return PyErr_Format(Detour_Exception_AccessViolation, "%p is an invalid memory address (Access Violation)", address);
-		}
-		return PyErr_Format(Detour_Exception_WindowsException, "%p is an invalid memory address (Windows Exception %d)", address, GetExceptionCode());
-	}
-}
-PyObject* detour_ReadDWORD(PyObject* self, PyObject* args) {
-	int* address;
-
-	if (!PyArg_ParseTuple(args, "i", &address)) {
-		return NULL;
-	}
-	__try {
-		return Py_BuildValue("i", *address);
-	} __except(1) {
-		if (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) {
-			return PyErr_Format(Detour_Exception_AccessViolation, "%p is an invalid memory address (Access Violation)", address);
-		}
-		return PyErr_Format(Detour_Exception_WindowsException, "%p is an invalid memory address (Windows Exception %d)", address, GetExceptionCode());
-	}
-}
 
 PyObject* detour_callback(PyObject* self, PyObject* args) {
 
@@ -288,19 +144,10 @@ PyObject* detour_setDetourSettings(PyObject* self, PyObject* args) {
 }
 ////////////////////////////////////////////////////////////////////
 static PyMethodDef detour_funcs[] = {
-	{"readASCIIZ", (PyCFunction)detour_ReadASCIIZ, METH_VARARGS, "Reads memory, None on NULL pointer"},
-	{"read", (PyCFunction)detour_ReadMemory, METH_VARARGS, "Reads memory"},
-	{"readByte", (PyCFunction)detour_ReadByte, METH_VARARGS, "Reads memory"},
-	{"readDWORD", (PyCFunction)detour_ReadDWORD, METH_VARARGS, "Reads memory"},
-	{"write", (PyCFunction)detour_WriteMemory, METH_VARARGS, "Writes memory"},
-	{"writeByte", (PyCFunction)detour_WriteByte, METH_VARARGS, "Writes memory"},
-	{"writeDWORD", (PyCFunction)detour_WriteDWORD, METH_VARARGS, "Writes memory"},
 
 	{"callback", (PyCFunction)detour_callback, METH_VARARGS, "Default callback function"},
 	{"setRegisters", (PyCFunction)detour_setRegisters, METH_VARARGS, "Sets registers"},
 	
-	{"loadPythonFile", (PyCFunction)detour_loadPythonFile, METH_VARARGS, "Loads and executes a python file"},
-
 	{"createDetour", (PyCFunction)detour_createDetour, METH_VARARGS, "Creates a detour"},
 	{"removeDetour", (PyCFunction)detour_removeDetour, METH_VARARGS, "Removes a detour"},
 
@@ -340,6 +187,14 @@ PyMODINIT_FUNC initgdetour() {
 
 	add_module_type_registers(m);
 	add_module_type_detourconfig(m);
+
+	initutil();
+
+	PyObject* util = PyImport_ImportModule("util");
+
+//	PyObject* util = PyImport_AddModule("util"); //borrowed ref
+//    Py_INCREF(util);
+	PyModule_AddObject(m, "util", util); //steals ref
 
 }
 

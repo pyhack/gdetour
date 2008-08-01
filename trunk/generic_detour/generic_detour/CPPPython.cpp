@@ -90,6 +90,30 @@ namespace CPPPython {
 	}
 
 	//-----------
+	std::string PObject::getRepr() const {
+		PyObject* tmp = PyObject_Repr(this->myObject); //new ref
+		if (!tmp) {
+			throw CPPPythonException("Could not get repr() of this object");
+		}
+		std::string ret(::PyString_AsString(tmp));
+		Py_DECREF(tmp);
+		return ret;
+	}
+	std::string PObject::getStr() const {
+		PyObject* tmp = PyObject_Str(this->myObject); //new ref
+		if (!tmp) {
+			throw CPPPythonException("Could not get repr() of this object");
+		}
+		std::string ret(::PyString_AsString(tmp));
+		Py_DECREF(tmp);
+		return ret;
+	}
+	Py_ssize_t PObject::getLength() const {
+		Py_ssize_t t = PyObject_Size(this->myObject);
+		if (t == -1) {
+			throw CPPPythonException("Trying to get len() of non-sequence or non-mapping");
+		}
+	}
 	bool PObject::hasAttr(PyObject* attr) const {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		if (::PyObject_HasAttr(this->myObject, attr) == 0) {

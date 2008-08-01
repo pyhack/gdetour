@@ -215,6 +215,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\python_module_util.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\python_type_detourconfig.cpp"
 				>
 			</File>
@@ -262,6 +266,10 @@
 			</File>
 			<File
 				RelativePath=".\python_module_gdetour.h"
+				>
+			</File>
+			<File
+				RelativePath=".\python_module_util.h"
 				>
 			</File>
 			<File

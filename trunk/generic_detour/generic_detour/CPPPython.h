@@ -1,4 +1,6 @@
 #pragma once
+#include <string>
+
 namespace CPPPython {
 	class CPPPythonException {
 		public:
@@ -42,6 +44,12 @@ namespace CPPPython {
 			//defined const where it makes logical sense (ie, on get instead of set)
 
 //----------------
+
+			std::string getRepr() const;
+			std::string getStr() const;
+
+			Py_ssize_t getLength() const;
+
 			bool hasAttr(char* attr) const;
 			bool hasAttr(PyObject* attr) const;
 
@@ -76,6 +84,7 @@ namespace CPPPython {
 		public:
 			PString(PyObject* obj, bool stealReferance = false);
 			PString(const char*);
+			operator const char*();
 	};
 	class PModule: public PObject {
 		public:

@@ -93,9 +93,9 @@ void Python_Initialize() {
 	pyGlobals = PDict(d);
 	pyLocals = PDict(d);
 
-	//Init_gdetour();
+	initgdetour();
 
-	//PyImport_ImportModuleEx("gdetour", myPyGlobals, myPyLocals, NULL);
+	PyObject* gd = PyImport_ImportModule("gdetour", pyGlobals, pyLocals, NULL);
 
 	//PyEval_ReleaseLock();
 }
