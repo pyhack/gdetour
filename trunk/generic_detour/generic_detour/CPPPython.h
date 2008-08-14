@@ -10,8 +10,12 @@ namespace CPPPython {
 			operator const char*();
 	};
 	class NULLPyObjectException: CPPPythonException {
-	public: NULLPyObjectException();
+		public: NULLPyObjectException();
 	};
+	class IndexOutOfRangeException: CPPPythonException {
+		public: IndexOutOfRangeException();
+	};
+	
 	class P_GIL {
 		//P_GIL is designed to make management of the GIL even easier.
 		//Just declare a type of it in the block you want to use Python code in
@@ -64,7 +68,10 @@ namespace CPPPython {
 
 
 			bool isCallable() const;
-			PObject PObject_Call(PyObject* args, ...); //A NULL argument MUST BE PASSED at the end!
+			PObject call(PyObject* arg0); //A NULL argument MUST BE PASSED at the end!
+			PObject call(PyObject* arg0,PyObject* arg1); //A NULL argument MUST BE PASSED at the end!
+			PObject call(PyObject* arg0,PyObject* arg1,PyObject* arg2); //A NULL argument MUST BE PASSED at the end!
+			PObject call(PyObject* arg0,PyObject* arg1,PyObject* arg2,PyObject* arg3); //A NULL argument MUST BE PASSED at the end!
 	};
 //--------------------
 //--------------------
@@ -85,16 +92,6 @@ namespace CPPPython {
 			PString(PyObject* obj, bool stealReferance = false);
 			PString(const char*);
 			operator const char*();
-	};
-	class PModule: public PObject {
-		public:
-			PModule(PyObject* obj, bool stealReferance = false);
-
-			static PModule getNewModule(const char* name);
-			static PModule importModule(char* name, PyObject* locals, PyObject* globals);
-			bool AddObject(const char* name, PyObject* value); //Add an object to module as name. This is a convenience function which can be used from the module's initialization function. This steals a reference to value.
-			bool AddConstant(const char* name, long value); //Add an integer constant to module as name. This convenience function can be used from the module's initialization function.
-			bool AddConstant(const char *name, const char *value); //Add a string constant to module as name. This convenience function can be used from the module's initialization function. The string value must be null-terminated. Return -1 on error, 0 on success. New in version 2.0. 
 	};
 	class PMapping: public PObject {
 		public:
@@ -122,5 +119,29 @@ namespace CPPPython {
 
 			PObject GetItem(char* key) const;
 			bool SetItem(char* key, PyObject* value);
+	};
+	class PModule: public PObject {
+		public:
+			PModule(PyObject* obj, bool stealReferance = false);
+
+			static PModule getModule(const char *name); //Gets a referance to an already imported module
+			PDict getDict();
+
+			static PModule getNewModule(const char* name); //Creates a new module
+			static PModule importModule(char* name, PyObject* globals, PyObject* locals);
+			bool AddObject(const char* name, PyObject* value); //Add an object to module as name. This is a convenience function which can be used from the module's initialization function. This steals a reference to value.
+			bool AddConstant(const char* name, long value); //Add an integer constant to module as name. This convenience function can be used from the module's initialization function.
+			bool AddConstant(const char *name, const char *value); //Add a string constant to module as name. This convenience function can be used from the module's initialization function. The string value must be null-terminated. Return -1 on error, 0 on success. New in version 2.0. 
+	};
+	class PSequence: public PObject {
+		public:
+			PSequence(PyObject* obj, bool stealReferance = false);
+
+			bool Contains(PyObject* key) const;
+
+			bool DelItem(Py_ssize_t i);
+
+			PObject GetItem(Py_ssize_t i) const;
+			bool SetItem(Py_ssize_t i, PyObject* value);
 	};
 };

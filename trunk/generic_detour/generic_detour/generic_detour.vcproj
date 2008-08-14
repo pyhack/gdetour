@@ -219,7 +219,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\python_type_detour.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\python_type_detourconfig.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\python_type_memory.cpp"
 				>
 			</File>
 			<File
@@ -274,6 +282,10 @@
 			</File>
 			<File
 				RelativePath=".\python_type_detourconfig.h"
+				>
+			</File>
+			<File
+				RelativePath=".\python_type_memory.h"
 				>
 			</File>
 			<File

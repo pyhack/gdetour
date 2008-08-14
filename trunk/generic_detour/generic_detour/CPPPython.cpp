@@ -12,8 +12,9 @@ namespace CPPPython {
 		memset(this->errmsg, 0, l);
 		strcpy_s(this->errmsg, l, err);
 		OutputDebugString(this->errmsg);
-		MessageBoxA(0, this->errmsg, "CPPPython Exception", 0);
-		__asm { INT 3 }
+		OutputDebugString("\n");
+		//MessageBoxA(0, this->errmsg, "CPPPython Exception", 0);
+		//__asm { INT 3 }
 	}
 	CPPPythonException::~CPPPythonException() {
 		if (this->errmsg != NULL) {
@@ -26,7 +27,10 @@ namespace CPPPython {
 	NULLPyObjectException::NULLPyObjectException() {
 		CPPPythonException::CPPPythonException("NULL PyObject pointer exception");
 	}
-
+	IndexOutOfRangeException::IndexOutOfRangeException() {
+		CPPPythonException::CPPPythonException("Index out of range");
+	}
+//-------------------------------------------------------------------------
 	P_GIL::P_GIL() {
 		if (!Py_IsInitialized()) {
 			OutputDebugString("Grabbing GIL from uninitilized Python?!");
@@ -38,7 +42,7 @@ namespace CPPPython {
 			PyGILState_Release(state);
 		}
 	}
-
+//-------------------------------------------------------------------------
 	PObject::PObject() {
 		this->del_on_destruct = true;
 		this->myObject = NULL;
@@ -52,7 +56,7 @@ namespace CPPPython {
 	}
 	PObject::PObject(const PObject& old) {
 		//copy constructor
-		this->del_on_destruct = true; 
+		this->del_on_destruct = true;
 		Py_INCREF(old.myObject); //This new class always copies the ref
 		this->myObject = old.myObject;
 	}
@@ -81,7 +85,8 @@ namespace CPPPython {
 	}
 	PObject::operator PyObject*() const {
 		if (this->myObject == NULL) {
-			throw new CPPPythonException("Implicit conversion to a NULL PyObject prevented");
+			//throw new CPPPythonException("Warning: Implicit conversion to a NULL PyObject*");
+			OutputDebugString("Warning: Implicit conversion to a NULL PyObject*");
 		}
 		return this->myObject;
 	}
@@ -188,10 +193,28 @@ namespace CPPPython {
 		}
 		return true;
 	}
-	PObject PObject::PObject_Call(PyObject* args, ...) {
+	PObject PObject::call(PyObject* arg0) {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		//A null argument MUST BE PASSED at the end!
-		PyObject* ret = PyObject_CallFunctionObjArgs(this->myObject, args);
+		PyObject* ret = PyObject_CallFunctionObjArgs(this->myObject, arg0);
+		return PObject(ret, true);
+	}
+	PObject PObject::call(PyObject* arg0, PyObject* arg1) {
+		if (!this->myObject) { throw new NULLPyObjectException(); }
+		//A null argument MUST BE PASSED at the end!
+		PyObject* ret = PyObject_CallFunctionObjArgs(this->myObject, arg0, arg1);
+		return PObject(ret, true);
+	}
+	PObject PObject::call(PyObject* arg0, PyObject* arg1, PyObject* arg2) {
+		if (!this->myObject) { throw new NULLPyObjectException(); }
+		//A null argument MUST BE PASSED at the end!
+		PyObject* ret = PyObject_CallFunctionObjArgs(this->myObject, arg0, arg1, arg2);
+		return PObject(ret, true);
+	}
+	PObject PObject::call(PyObject* arg0, PyObject* arg1, PyObject* arg2, PyObject* arg3) {
+		if (!this->myObject) { throw new NULLPyObjectException(); }
+		//A null argument MUST BE PASSED at the end!
+		PyObject* ret = PyObject_CallFunctionObjArgs(this->myObject, arg0, arg1, arg2, arg3);
 		return PObject(ret, true);
 	}
 
@@ -211,7 +234,7 @@ namespace CPPPython {
 	PNumber::PNumber(long num) {
 		this->myObject = PyInt_FromLong(num); //returns new ref
 	}
-//---------------------
+//-------------------------------------------------------------------------
 	PBool::PBool(PyObject* obj, bool stealReferance) {
 		if (!obj) { this->myObject = NULL; return; }
 		if (PyBool_Check(obj) == 0) {
@@ -230,6 +253,7 @@ namespace CPPPython {
 		PBool x = (Py_True);
 		return x;
 	}
+//-------------------------------------------------------------------------
 	PString::PString(PyObject* obj, bool stealReferance) {
 		if (!obj) { this->myObject = NULL; return; }
 		if (PyString_Check(obj) == 0) {
@@ -244,6 +268,7 @@ namespace CPPPython {
 		if (!obj) { this->myObject = NULL; return; }
 		this->myObject = PyString_FromString(obj);
 	}
+//-------------------------------------------------------------------------
 	PModule::PModule(PyObject* obj, bool stealReferance) {
 		if (!obj) { this->myObject = NULL; return; }
 		if (!obj) {
@@ -257,11 +282,19 @@ namespace CPPPython {
 		}
 		this->myObject = obj;
 	}
+	PDict PModule::getDict() {
+		PDict ret = PDict(::PyModule_GetDict(this->myObject));
+		return ret;
+	}
+	PModule PModule::getModule(const char *name) {
+		PModule ret = PModule(::PyImport_AddModule(name));
+		return ret;
+	}
 	PModule PModule::getNewModule(const char *name) {
 		PModule ret = PModule(::PyModule_New(name), true);
 		return ret;
 	}
-	PModule PModule::importModule(char* name, PyObject* locals, PyObject* globals) {
+	PModule PModule::importModule(char* name, PyObject* globals, PyObject* locals) {
 		PyObject* ret;
 		if (locals == globals == NULL) {
 			ret = ::PyImport_ImportModule(name);
@@ -304,6 +337,7 @@ namespace CPPPython {
 		}
 		return true;
 	}
+//----------------------------------------------------------------------
 	PMapping::PMapping(PyObject* obj, bool stealReferance) {
 		if (!obj) { this->myObject = NULL; return; }
 		if (PyMapping_Check(obj) == 0) {
@@ -349,6 +383,9 @@ namespace CPPPython {
 	PObject PMapping::GetItem(char* key) const {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		PyObject* ret = ::PyMapping_GetItemString(this->myObject, key);
+		if (ret == NULL) {
+			throw new IndexOutOfRangeException();
+		}
 		return PObject(ret, true);
 	}
 	bool PMapping::SetItem(char *key, PyObject *value) {
@@ -358,7 +395,7 @@ namespace CPPPython {
 		}
 		return true;
 	}
-
+//-------------------------------------------------------------------------
 	PDict PDict::getNewDict() {
 		return PDict(PyDict_New(), true);
 	}
@@ -406,6 +443,51 @@ namespace CPPPython {
 	bool PDict::SetItem(char *key, PyObject *value) {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		if (::PyDict_SetItemString(this->myObject, key, value) == -1) {
+			return false;
+		}
+		return true;
+	}
+//--------------------------------------------------------------------
+	PSequence::PSequence(PyObject* obj, bool stealReferance) {
+		if (!obj) { this->myObject = NULL; return; }
+		if (PySequence_Check(obj) == 0) {
+			throw new CPPPythonException("PSequence objects must have valid sequences to wrap");
+		}
+		if (!stealReferance && obj) {
+			Py_INCREF(obj);
+		}
+		this->myObject = obj;
+	}
+	bool PSequence::Contains(PyObject* v) const {
+		if (!this->myObject) {
+			throw new NULLPyObjectException();
+		}
+		if (::PySequence_Contains(this->myObject, v) == 0) {
+			return false;
+		}
+		return true;
+	}
+	bool PSequence::DelItem(Py_ssize_t i) {
+		if (!this->myObject) { throw new NULLPyObjectException(); }
+		if (PySequence_DelItem(this->myObject, i) == -1) {
+			return false;
+		}
+		return true;
+	}
+	PObject PSequence::GetItem(Py_ssize_t i) const {
+		if (!this->myObject) { throw new NULLPyObjectException(); }
+		PyObject* ret = ::PySequence_GetItem(this->myObject, i);
+		if (ret == NULL) {
+			if (PyErr_ExceptionMatches(PyExc_IndexError)) {
+				PyErr_Clear();
+				throw new IndexOutOfRangeException();
+			}
+		}
+		return PObject(ret, true);
+	}
+	bool PSequence::SetItem(Py_ssize_t i, PyObject *value) {
+		if (!this->myObject) { throw new NULLPyObjectException(); }
+		if (::PySequence_SetItem(this->myObject, i, value) == -1) {
 			return false;
 		}
 		return true;

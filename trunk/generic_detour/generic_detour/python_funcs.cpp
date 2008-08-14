@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "python_funcs.h"
-
+#include "python_module_gdetour.h"
 #include "python_type_registers.h"
 
 using namespace CPPPython;
@@ -87,17 +87,18 @@ void Python_Initialize() {
 	}
 	PyEval_InitThreads();
 
-	PyObject* mainmod = PyImport_AddModule("__main__"); //borrowed ref
-	PyObject* d = PyModule_GetDict(mainmod); //borrowed ref
+	PModule mainmod = PModule::getModule("__main__");
+	PDict d = PyModule_GetDict(mainmod); //borrowed ref
 
-	pyGlobals = PDict(d);
-	pyLocals = PDict(d);
+	pyGlobals = d;
+	pyLocals = d;
 
-	initgdetour();
+	//These three do import gdetour
+	//initgdetour();
+	//PModule gd = PModule::importModule("gdetour", pyGlobals, pyLocals);
+	//mainmod.AddObject("gdetour", gd);
 
-	PyObject* gd = PyImport_ImportModule("gdetour", pyGlobals, pyLocals, NULL);
 
-	//PyEval_ReleaseLock();
 }
 void Python_Unload() {
 	P_GIL gil;

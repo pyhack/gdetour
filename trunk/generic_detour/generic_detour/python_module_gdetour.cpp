@@ -4,6 +4,7 @@
 #include "python_funcs.h"
 #include "python_type_registers.h"
 #include "python_type_detourconfig.h"
+#include "python_type_memory.h"
 #include "structmember.h"
 
 
@@ -171,31 +172,20 @@ PyMODINIT_FUNC initgdetour() {
 
 	PModule pm = PModule(m);
 	pm.AddObject("DetourException", Detour_Exception);
-	pm.AddObject("DetourExceptionAlreadyInitilized", Detour_Exception_AlreadyInitilized);
+	pm.AddObject("DetourAlreadyInitilizedException", Detour_Exception_AlreadyInitilized);
 	pm.AddObject("DetourWindowsException", Detour_Exception_WindowsException);
 	pm.AddObject("DetourAccessViolationException", Detour_Exception_AccessViolation);
 
-	//Py_INCREF(Detour_Exception);
-	//Py_INCREF(Detour_Exception_AlreadyInitilized);
-	//Py_INCREF(Detour_Exception_WindowsException);
-	//Py_INCREF(Detour_Exception_AccessViolation);
-
-	//PyModule_AddObject(m, "DetourException", Detour_Exception);
-	//PyModule_AddObject(m, "DetourExceptionAlreadyInitilized", Detour_Exception_AlreadyInitilized);
-	//PyModule_AddObject(m, "DetourWindowsException", Detour_Exception_WindowsException);
-	//PyModule_AddObject(m, "DetourAccessViolationException", Detour_Exception_AccessViolation);
-
 	add_module_type_registers(m);
 	add_module_type_detourconfig(m);
+	add_module_type_memory(m);
 
 	initutil();
 
 	PyObject* util = PyImport_ImportModule("util");
 
-//	PyObject* util = PyImport_AddModule("util"); //borrowed ref
-//    Py_INCREF(util);
-	PyModule_AddObject(m, "util", util); //steals ref
-
+	//PyModule_AddObject(m, "util", util); //steals ref
+	pm.AddObject("util", util);
 }
 
 
