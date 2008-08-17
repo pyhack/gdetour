@@ -5,66 +5,162 @@
 
 #include <windows.h>
 #include "CPPPython.h"
+
 using namespace CPPPython;
-typedef struct {
+
+typedef struct memory {
     PyObject_HEAD
-	unsigned long rwsize;
+	PyObject* ctypes;
+
+	unsigned void* base;
+	PyObject* autoInc;
+
+
 } memory;
 
-static void memory_dealloc(memory* self) {
-}
+
+
 
 static PyObject * memory_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     memory *self;
     self = (memory *)type->tp_alloc(type, 0);
     if (self != NULL) {
-		self->rwsize = 1;
+		self->ctypes = PyImport_ImportModule("ctypes");
+		if (self->ctypes == NULL) {
+			type->tp_free(self);
+			return PyErr_Format(PyExc_NameError, "Error creating <memory> type: Required module ctypes not found.");
+		}
+		self->base = 0;
+		Py_INCREF(Py_False);
+		self->autoInc = Py_False;
 	}
     return (PyObject *)self;
 }
-
+static void memory_dealloc(memory* self) {
+	Py_CLEAR(self->ctypes);
+}
 static int memory_init(memory *self, PyObject *args, PyObject *kwds) {
-	//PyArg_ParseTuple(args, "l", &self->rwsize);
-	self->rwsize = 1;
+	PyArg_ParseTuple(args, "|l", &self->base);
     return 0;
 }
 
-static PyMemberDef memory_members[] = {
-	//Comment to hide impl
-	//{"rwsize", T_ULONG, offsetof(memory, rwsize), 0, "rwsize"},
-    {NULL}  /* Sentinel */
-};
-
-static PyGetSetDef memory_getseters[] = {
-    {NULL}  /* Sentinel */
-};
-
 static PyObject* memory_repr(memory* self) {
-	return PyString_FromString("<memory object>");
+	PyObject* s0 = PyString_FromFormat("<memory object based at %p, autoInc ", self->base);
+	PyObject* s1 = PyObject_Repr(self->autoInc);
+	PyObject* s2 = PyString_FromString(">");
+
+	PyString_ConcatAndDel(&s0, s1);
+	PyString_ConcatAndDel(&s0, s2);
+	return s0;
 }
 
-static PyMethodDef memory_methods[] = {
-    {NULL}  /* Sentinel */
-};
+
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+//------Reading Methods
+
+#pragma region memory Reading Methods
+
+static PyObject* memory_byte(memory* self, PyObject* args) {
+	long count = 1;
+	if (!PyArg_ParseTuple(args, "|l", &count)) {
+		return NULL;
+	}
+	if (IsBadReadPtr((LPVOID)self->base, count)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->base);
+	}
+	PyObject* ret;
+	ret = PyString_FromStringAndSize((char*)self->base, count);
+	if (self->autoInc == Py_True) {
+		self->base += count;
+	}
+	return ret;
+}
+static PyObject* memory_dword(memory* self, PyObject* args) {
+	long count = 1;
+	PyObject* in_bool = NULL;
+	if (!PyArg_ParseTuple(args, "|lO", &count, &in_bool)) {
+		return NULL;
+	}
+	if (IsBadReadPtr((LPVOID)self->base, count*4)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->base);
+	}
+	PyObject* ret;
+	if (count == 1) {
+		if (in_bool == Py_True) {
+			PyObject* obj = PyObject_GetAttrString(self->ctypes, "c_long");
+			ret = PyObject_CallMethod(obj,"from_address", "l", (long*)self->base);
+			Py_DECREF(obj);
+		} else {
+			ret = PyLong_FromLong(*(long*)self->base);
+		}
+	} else {
+		ret = PyTuple_New(count);
+		for (int i = 0; i < count; i++) {
+			PyTuple_SetItem(ret, i, PyLong_FromLong(*((long*)self->base)+i)); //hooray pointer math and ref stealing tuple funcs
+		}
+	}
+	if (self->autoInc == Py_True) {
+		self->base += (count * 4);
+	}
+	return ret;
+}
+static PyObject* memory_qword(memory* self, PyObject* args) {
+	long count = 1;
+	if (!PyArg_ParseTuple(args, "|l", &count)) {
+		return NULL;
+	}
+	if (IsBadReadPtr((LPVOID)self->base, count*8)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->base);
+	}
+	PyObject* ret;
+	if (count == 1) {
+		ret = PyLong_FromLongLong(*(PY_LONG_LONG*)self->base);
+	} else {
+		ret = PyTuple_New(count);
+		for (int i = 0; i < count; i++) {
+			PyTuple_SetItem(ret, i, PyLong_FromLong(*((PY_LONG_LONG*)self->base)+i)); //hooray pointer math and ref stealing tuple funcs
+		}
+	}
+	if (self->autoInc == Py_True) {
+		self->base += (count * 8);
+	}
+	return ret;
+}
+
+#pragma endregion //These methods are those like "memory_byte", "memory_dword", etc
+
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+//------Sequence Methods
 
 static PyObject* memory_getItem(memory* self, Py_ssize_t i) {
-	if (IsBadReadPtr((LPVOID)i, self->rwsize)) {
-		goto err_ptr;
+	PObject mT((PyObject*)&memoryType);
+
+	if (IsBadReadPtr((LPVOID)i, 1)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", i);
 	}
-	return PyString_FromStringAndSize((char*)i, self->rwsize);
-err_ptr:
-	return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", i);
+
+	PyObject* tmp = PyInt_FromSsize_t(i);
+	PObject newObj = mT.call(tmp, NULL);
+	newObj.incRef(); //live beyond return
+	Py_DECREF(tmp);
+
+	return newObj;
 }
+
 static PyObject* memory_getSlice(memory* self, Py_ssize_t i, Py_ssize_t len) {
+	i += (long)self->base;
 	if (IsBadReadPtr((LPVOID)i, len)) {
 		goto err_ptr;
 	}
-	return PyString_FromStringAndSize((char*)i, len);
+	return PyString_FromStringAndSize((char*)((long)i), len);
 err_ptr:
 	return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", i);
 }
+
 static int memory_setItem(memory* self, Py_ssize_t i, PyObject *v) {
-	unsigned long objsize = self->rwsize;
+	unsigned long objsize = 1;
 	unsigned long objval = 0;
 
 	if (PyString_Check(v) == FALSE) {
@@ -75,7 +171,9 @@ static int memory_setItem(memory* self, Py_ssize_t i, PyObject *v) {
 
 	objsize = s.getLength();
 	char* st = PyString_AsString(v);
-	
+
+	i += (long)self->base;
+
 	if (IsBadWritePtr((LPVOID)i, objsize)) {
 		goto err_ptr;
 	}
@@ -84,12 +182,57 @@ static int memory_setItem(memory* self, Py_ssize_t i, PyObject *v) {
 err_ptr:
 	PyErr_Format(PyExc_IndexError, "%p is an invalid (nonwriteable) memory address", i);
 	return -1;
-err_args:
-	//PyErr_Format(PyExc_TypeError, "You must use an integer from 0 to 255 or a tuple (bytes, value from 0 to 2^(8*bytes)-1)", i);
-	return -1;
-
 }
 
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+//----------memory get/setters
+//-------------------------------------------------------------------------
+#pragma region memory getters and setters
+
+PyObject* memory_get_autoInc(memory* self, void* closure) {
+	Py_INCREF(self->autoInc);
+	return self->autoInc;
+}
+int memory_set_autoInc(memory* self, PyObject* newvalue, void* closure) {
+	if (newvalue == NULL) {
+		PyErr_Format(PyExc_ValueError, "autoInc cannot be deleted.");
+	}
+	if (newvalue == Py_True || newvalue == Py_False) {
+		Py_INCREF(newvalue);
+		Py_DECREF(self->autoInc);
+		self->autoInc = newvalue;
+	} else {
+		PyErr_Format(PyExc_ValueError, "%r is neither True nor False.", newvalue);
+		return -1;
+	}
+	return 0;
+}
+
+#pragma endregion
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+//----------memory Python Type Information
+//-------------------------------------------------------------------------
+
+static PyMemberDef memory_members[] = {
+	//Comment to hide implementation
+	{"base", T_ULONG, offsetof(memory, base), 0, "Base from which reading methods read from"},
+	//{"autoInc", T_ULONG, offsetof(memory, base), 0, "If True, base pointer is incremented after reading memory"},
+	{NULL}  /* Sentinel */
+};
+static PyGetSetDef memory_getseters[] = {
+	{"autoInc", (getter)memory_get_autoInc, (setter)memory_set_autoInc, "If True, base pointer is incremented after reading memory", NULL},
+	{NULL}  /* Sentinel */
+};
+static PyMethodDef memory_methods[] = {
+	{"byte", (PyCFunction)memory_byte, METH_VARARGS, "Returns memory as a sequence of bytes."},
+	{"dword", (PyCFunction)memory_dword, METH_VARARGS, "Returns memory as a sequence of dwords."},
+	{"qword", (PyCFunction)memory_qword, METH_VARARGS, "Returns memory as a sequence of qwords."},
+	{NULL}  /* Sentinel */
+};
 static PySequenceMethods memory_seq_methods[] = {
 	0, /*lenfunc sq_length;*/
 	0, /*binaryfunc sq_concat;*/
@@ -106,7 +249,7 @@ static PySequenceMethods memory_seq_methods[] = {
 static PyTypeObject memoryType = {
     PyObject_HEAD_INIT(NULL)
     0,                         /*ob_size*/
-    "gdetour.memory",             /*tp_name*/
+    "gdetour.memoryType",             /*tp_name*/
     sizeof(memory),             /*tp_basicsize*/
     0,                         /*tp_itemsize*/
     (destructor)memory_dealloc, /*tp_dealloc*/
@@ -145,6 +288,11 @@ static PyTypeObject memoryType = {
     memory_new,                 /* tp_new */
 };
 
+
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+
 bool add_module_type_memory(PyObject* m) {
 	if (PyType_Ready(&memoryType) < 0) {
         return false;
@@ -158,11 +306,6 @@ bool add_module_type_memory(PyObject* m) {
 	PyModule_AddObject(m, "memoryType", (PyObject *)&memoryType); //steals ref
 
 	PObject mT((PyObject*)&memoryType);
-
-	PNumber pn4 = 4;
-	PNumber pn1 = 1;
-
-	//PyModule_AddObject(m, "mem_dword", mT.call(pn4, NULL)); //steals ref
 	PyModule_AddObject(m, "memory", mT.call(NULL)); //steals ref
 
 	return true;

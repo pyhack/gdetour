@@ -47,6 +47,12 @@ namespace CPPPython {
 		this->del_on_destruct = true;
 		this->myObject = NULL;
 	}
+	void PObject::incRef() {
+		Py_XINCREF(this->myObject);
+	}
+	void PObject::decRef() {
+		Py_XDECREF(this->myObject);
+	}
 	PObject::PObject(PyObject* obj, bool stealReferance) {
 		this->del_on_destruct = true;
 		if (!stealReferance && obj) {

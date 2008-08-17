@@ -60,11 +60,7 @@ int detourconfig_set_executeOriginal(detourconfig* self, PyObject* newvalue, voi
 
 
 }
-static PyGetSetDef detourconfig_getseters[] = {
-	{"executeOriginal", (getter)detourconfig_get_executeOriginal, (setter)detourconfig_set_executeOriginal, "executeOriginal boolean", NULL},
-//    {"last", (getter)Noddy_getlast, (setter)Noddy_setlast, "last name", NULL},
-    {NULL}  /* Sentinel */
-};
+
 
 static PyObject* detourconfig_repr(detourconfig* self) {
     static PyObject *format = NULL;
@@ -98,7 +94,11 @@ static PyObject* detourconfig_repr(detourconfig* self) {
     
     return result;
 }
-
+static PyGetSetDef detourconfig_getseters[] = {
+	{"executeOriginal", (getter)detourconfig_get_executeOriginal, (setter)detourconfig_set_executeOriginal, "executeOriginal boolean", NULL},
+	//    {"last", (getter)Noddy_getlast, (setter)Noddy_setlast, "last name", NULL},
+	{NULL}  /* Sentinel */
+};
 static PyMethodDef detourconfig_methods[] = {
 //    {"name", (PyCFunction)Noddy_name, METH_NOARGS, "Return the name, combining the first and last name"},
     {NULL}  /* Sentinel */

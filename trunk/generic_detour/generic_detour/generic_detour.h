@@ -12,6 +12,8 @@
 #define GENERIC_DETOUR_API extern "C" __declspec(dllimport)
 #endif
 
+class GDetour;
+
 struct REGISTERS {
 	//in order of the pushad call
 	DWORD edi;
@@ -35,6 +37,9 @@ struct DETOUR_LIVE_SETTINGS {
 	DWORD		caller_ret; //4
 	DWORD		paramZero; //0
 };
+
+typedef void* (*gdetourCallback)(GDetour d, DETOUR_LIVE_SETTINGS l);
+
 class GDetour {
 	public:
 		BYTE*		address;
@@ -48,6 +53,9 @@ class GDetour {
 		DETOUR_LIVE_SETTINGS live_settings;
 		//------
 		DETOUR_GATEWAY_OPTIONS gateway_opt;
+
+		gdetourCallback callbackFunction;
+		
 
 		bool Apply();
 		bool Unapply();

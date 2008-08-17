@@ -33,6 +33,8 @@ namespace CPPPython {
 			PyObject* myObject;
 		public:
 			PObject();
+			void incRef();
+			void decRef();
 			PObject(PyObject* obj, bool stealReferance=false);
 			PObject(const PObject& old); //copy constructor
 			~PObject();
