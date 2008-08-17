@@ -84,7 +84,7 @@ PyObject* detour_createDetour(PyObject* self, PyObject* args) {
 		return NULL;
 	}
 
-	bool ret = add_detour(address, overwrite_length, bytes_to_pop, type);
+	bool ret = add_detour(address, overwrite_length, bytes_to_pop, CallPythonDetour, type);
 	
 	if (ret) {
 		Py_RETURN_TRUE;
@@ -201,7 +201,7 @@ PyMODINIT_FUNC initgdetour() {
 
 
 
-void CallPythonDetour(GDetour* d) {
+void CallPythonDetour(GDetour &d, DETOUR_LIVE_SETTINGS &stack_live_settings) {
 		/* ensure we hold the lock */
 	P_GIL gil;
 
@@ -222,17 +222,17 @@ void CallPythonDetour(GDetour* d) {
 	OutputDebugString("Calling Function...\n");
 	PyObject* ret = PyEval_CallFunction(detour_pyfunc, 
 		"i(iiiiiiii)ii", 
-		d->live_settings.ret_addr-5,
-		d->live_settings.registers.eax,
-		d->live_settings.registers.ecx,
-		d->live_settings.registers.edx,
-		d->live_settings.registers.ebx,
-		d->live_settings.registers.esp,
-		d->live_settings.registers.ebp,
-		d->live_settings.registers.esi,
-		d->live_settings.registers.edi,
-		d->live_settings.flags,
-		d->live_settings.caller_ret - 5
+		d.live_settings.ret_addr-5,
+		d.live_settings.registers.eax,
+		d.live_settings.registers.ecx,
+		d.live_settings.registers.edx,
+		d.live_settings.registers.ebx,
+		d.live_settings.registers.esp,
+		d.live_settings.registers.ebp,
+		d.live_settings.registers.esi,
+		d.live_settings.registers.edi,
+		d.live_settings.flags,
+		d.live_settings.caller_ret - 5
 	);
 	if (PyErr_Occurred()) { PyErr_Print(); }
 

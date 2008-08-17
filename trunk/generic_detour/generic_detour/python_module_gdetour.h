@@ -1,7 +1,7 @@
 #include <map>
 #include "generic_detour.h"
 
-void CallPythonDetour(GDetour*);
+void CallPythonDetour(GDetour &d, DETOUR_LIVE_SETTINGS &stack_live_settings);
 
 PyMODINIT_FUNC initgdetour();
 

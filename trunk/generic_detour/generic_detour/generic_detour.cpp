@@ -9,7 +9,7 @@
 detour_list_type detours;
 
 
-GDetour::GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, int type) {
+GDetour::GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourCallback callback, int type) {
 	//type is unused. provided for forward compat.
 	if (overwrite_length < 5) {
 		return; //need 5 bytes at minimum for JMP in
@@ -35,6 +35,8 @@ GDetour::GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, int type
 	this->original_code[this->original_code_len] = 0xE9; //JMP
 	DWORD* retJmp = (DWORD*)&this->original_code[this->original_code_len+1];
 	*retJmp = CalculateRelativeJMP((DWORD)&this->original_code[this->original_code_len], (DWORD) (this->address + this->original_code_len));
+	
+	this->callbackFunction = callback;
 
 	this->Apply();
 }
@@ -94,8 +96,8 @@ GENERIC_DETOUR_API bool remove_detour(BYTE* address) {
 	detours.erase(address);
 	return true;
 }
-GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, int type) {
-	detours.insert(std::pair<BYTE*,GDetour*>(address, new GDetour(address, overwrite_length, bytes_to_pop, type)));
+GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourCallback callback, int type) {
+	detours.insert(std::pair<BYTE*,GDetour*>(address, new GDetour(address, overwrite_length, bytes_to_pop, callback, type)));
 	return true;
 };
 
@@ -128,18 +130,40 @@ do_return_to_orig:
 		JMP DWORD PTR [ESP-52] //jmp to DETOUR_GATEWAY_OPTIONS[2]
 	}
 }
+
+void default_callback(GDetour &d, DETOUR_LIVE_SETTINGS &stack_live_data) {
+	char tempstring[512];
+	sprintf_s(tempstring, sizeof(tempstring),"func: 0x%x, ret: 0x%x,\n R[EAX] = 0x%x,\n R[ECX] = 0x%x,\n R[EDX] = 0x%x,\n R[EBX] = 0x%x,\n R[ESP] = 0x%x,\n R[EBP] = 0x%x,\n R[ESI] = 0x%x,\n R[EDI] = 0x%x,\n flags = 0x%x,\n arg0 = 0x%x,\n arg1 = 0x%x\n",
+		stack_live_data.ret_addr-5,
+		stack_live_data.caller_ret,
+		stack_live_data.registers.eax,
+		stack_live_data.registers.ecx,
+		stack_live_data.registers.edx,
+		stack_live_data.registers.ebx,
+		stack_live_data.registers.esp,
+		stack_live_data.registers.ebp,
+		stack_live_data.registers.esi,
+		stack_live_data.registers.edi,
+		stack_live_data.flags,
+		stack_live_data.paramZero,
+		(DWORD*)(&d.live_settings.paramZero)[1]
+	);
+	//MessageBox(0,tempstring, "",0);
+	OutputDebugString(tempstring);
+}
+
 void detour_c_call_dest(
-	DETOUR_GATEWAY_OPTIONS gateway_opt,
-	DETOUR_LIVE_SETTINGS stack
+	DETOUR_GATEWAY_OPTIONS stack_gateway_opt,
+	DETOUR_LIVE_SETTINGS stack_live_data
 	) {
 
 	char tempstring[512];
 
-	memset(&gateway_opt, 0, sizeof(gateway_opt));
+	memset(&stack_gateway_opt, 0, sizeof(stack_gateway_opt));
 
-	detour_list_type::iterator dl = detours.find((BYTE*)(stack.ret_addr-5));
+	detour_list_type::iterator dl = detours.find((BYTE*)(stack_live_data.ret_addr-5));
 	if (dl == detours.end()) {
-		sprintf_s(tempstring, sizeof(tempstring), "Called detour from function 0x%x and could not find a registered handler. Crash is likely.", (stack.ret_addr-5));
+		sprintf_s(tempstring, sizeof(tempstring), "Called detour from function 0x%x and could not find a registered handler. Crash is likely.", (stack_live_data.ret_addr-5));
 		OutputDebugString(tempstring);
 		return;
 	}
@@ -148,37 +172,25 @@ void detour_c_call_dest(
 
 	EnterCriticalSection(&d.my_critical_section);
 
-	gateway_opt = d.gateway_opt; //copy options to the stack
 
-	stack.registers.esp = stack.registers.esp + 4; //ESP is ignored on POPAD anyway, and its up 4 due to PUSHFD. Lets just correct it for simplicity.
 
-	d.live_settings = stack;
+	stack_live_data.registers.esp += 4; //ESP is ignored on POPAD anyway, and its up 4 due to PUSHFD. Lets just correct it for simplicity.
 
-	sprintf_s(tempstring, sizeof(tempstring),"func: 0x%x, ret: 0x%x,\n R[EAX] = 0x%x,\n R[ECX] = 0x%x,\n R[EDX] = 0x%x,\n R[EBX] = 0x%x,\n R[ESP] = 0x%x,\n R[EBP] = 0x%x,\n R[ESI] = 0x%x,\n R[EDI] = 0x%x,\n flags = 0x%x,\n arg0 = 0x%x,\n arg1 = 0x%x\n",
-		d.live_settings.ret_addr-5,
-		d.live_settings.caller_ret,
-		d.live_settings.registers.eax,
-		d.live_settings.registers.ecx,
-		d.live_settings.registers.edx,
-		d.live_settings.registers.ebx,
-		d.live_settings.registers.esp,
-		d.live_settings.registers.ebp,
-		d.live_settings.registers.esi,
-		d.live_settings.registers.edi,
-		d.live_settings.flags,
-		d.live_settings.paramZero,
-		(DWORD*)(&d.live_settings.paramZero)[1]
-		);
-	//MessageBox(0,tempstring, "",0);
-	OutputDebugString(tempstring);
+	d.live_settings = stack_live_data;
 
-	CallPythonDetour(&d);
+	default_callback(d, stack_live_data);
+	if (d.callbackFunction) {
+		d.callbackFunction(d, stack_live_data);
+	}
 
-	stack = d.live_settings; //Copy the temporary live settings back to the stack
+	stack_gateway_opt = d.gateway_opt; //copy options to the stack
+	stack_live_data = d.live_settings; //Copy the temporary live settings back to the stack
 	
 	LeaveCriticalSection(&d.my_critical_section);
 
 }
+
+
 
 GENERIC_DETOUR_API GDetour* getDetour(BYTE* address) {
 	detour_list_type::iterator dl = detours.find((BYTE*)(address));
@@ -201,7 +213,7 @@ GENERIC_DETOUR_API int stolen_detour_func(REGISTERS registers, DWORD flags, DWOR
 }
 
 GENERIC_DETOUR_API int add_test_detour() {
-	return add_detour((BYTE*) &test_detour_func, 5, 4);
+	return add_detour((BYTE*) &test_detour_func, 5, 4, NULL);
 }
 
 

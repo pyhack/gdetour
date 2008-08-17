@@ -3,7 +3,7 @@
 
 #include "structmember.h"
 
-typedef struct {
+typedef struct registers {
     PyObject_HEAD
     DWORD edi;
 	DWORD esi;

@@ -38,7 +38,7 @@ struct DETOUR_LIVE_SETTINGS {
 	DWORD		paramZero; //0
 };
 
-typedef void* (*gdetourCallback)(GDetour d, DETOUR_LIVE_SETTINGS l);
+typedef void (*gdetourCallback)(GDetour &d, DETOUR_LIVE_SETTINGS &l);
 
 class GDetour {
 	public:
@@ -60,14 +60,14 @@ class GDetour {
 		bool Apply();
 		bool Unapply();
 		
-		GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, int type=0);
+		GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourCallback callback, int type);
 		~GDetour();
 };
 typedef std::map<BYTE*, GDetour*> detour_list_type;
 
 extern detour_list_type detours;
 
-GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, int type=0);
+GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourCallback callback, int type=0);
 GENERIC_DETOUR_API bool remove_detour(BYTE* address);
 GENERIC_DETOUR_API GDetour* getDetour(BYTE* address);
 

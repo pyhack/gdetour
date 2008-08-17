@@ -3,7 +3,7 @@
 
 #include "structmember.h"
 
-typedef struct {
+typedef struct detourconfig {
     PyObject_HEAD
 	DWORD bytesToPop;
     PyObject* executeOriginal; //Python True or False
