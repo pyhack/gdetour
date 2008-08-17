@@ -38,6 +38,7 @@ static PyObject * memory_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 }
 static void memory_dealloc(memory* self) {
 	Py_CLEAR(self->ctypes);
+	self->ob_type->tp_free((PyObject*)self);
 }
 static int memory_init(memory *self, PyObject *args, PyObject *kwds) {
 	PyArg_ParseTuple(args, "|l", &self->base);

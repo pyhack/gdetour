@@ -96,9 +96,10 @@ GENERIC_DETOUR_API bool remove_detour(BYTE* address) {
 	detours.erase(address);
 	return true;
 }
-GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourCallback callback, int type) {
-	detours.insert(std::pair<BYTE*,GDetour*>(address, new GDetour(address, overwrite_length, bytes_to_pop, callback, type)));
-	return true;
+GENERIC_DETOUR_API GDetour* add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourCallback callback, int type) {
+	GDetour* gd = new GDetour(address, overwrite_length, bytes_to_pop, callback, type);
+	detours.insert(std::pair<BYTE*,GDetour*>(address, gd));
+	return gd;
 };
 
 __declspec(naked) int detour_call_dest() {
@@ -212,7 +213,7 @@ GENERIC_DETOUR_API int stolen_detour_func(REGISTERS registers, DWORD flags, DWOR
 	return 42;
 }
 
-GENERIC_DETOUR_API int add_test_detour() {
+GENERIC_DETOUR_API GDetour* add_test_detour() {
 	return add_detour((BYTE*) &test_detour_func, 5, 4, NULL);
 }
 

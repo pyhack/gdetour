@@ -124,6 +124,7 @@ namespace CPPPython {
 		if (t == -1) {
 			throw CPPPythonException("Trying to get len() of non-sequence or non-mapping");
 		}
+		return t;
 	}
 	bool PObject::hasAttr(PyObject* attr) const {
 		if (!this->myObject) { throw new NULLPyObjectException(); }

@@ -67,7 +67,7 @@ typedef std::map<BYTE*, GDetour*> detour_list_type;
 
 extern detour_list_type detours;
 
-GENERIC_DETOUR_API bool add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourCallback callback, int type=0);
+GENERIC_DETOUR_API GDetour* add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourCallback callback, int type=0);
 GENERIC_DETOUR_API bool remove_detour(BYTE* address);
 GENERIC_DETOUR_API GDetour* getDetour(BYTE* address);
 
@@ -82,4 +82,4 @@ DWORD CalculateAbsoluteJMP(DWORD jmp_address, DWORD jmp_reldestination, int jmp_
 GENERIC_DETOUR_API int test_detour_func(int count=0);
 GENERIC_DETOUR_API int stolen_detour_func(REGISTERS registers, DWORD flags, DWORD retaddr, DWORD params[]);
 
-GENERIC_DETOUR_API int add_test_detour();
+GENERIC_DETOUR_API GDetour* add_test_detour();
