@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="gdetour_test"
+	Name="test_gdetour"
 	ProjectGUID="{07A2B9F3-E484-4BC1-8C2C-BA8B3FA41319}"
 	RootNamespace="gdetour_test"
 	Keyword="Win32Proj"
@@ -85,6 +85,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Copy Python Debug Library to Output"
+				CommandLine="@echo on&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\debugPython\python26_d.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\debugPython\python26_d.pdb&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration

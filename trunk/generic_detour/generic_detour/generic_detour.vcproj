@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="gdetour"
+	Name="pydetour"
 	ProjectGUID="{7BA10A54-A515-4467-AC83-C66E68C3AC7C}"
 	RootNamespace="generic_detour"
 	Keyword="Win32Proj"
@@ -41,12 +41,13 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="C:\Python25\include"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)\..\..\debugPython&quot;;C:\Python26\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;GENERIC_DETOUR_EXPORTS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="2"
+				PrecompiledHeaderFile="$(IntDir)\$(TargetName)_d.pch"
 				WarningLevel="3"
 				DebugInformationFormat="4"
 			/>
@@ -61,9 +62,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\$(ProjectName).pyd"
+				OutputFile="$(OutDir)\$(ProjectName)_d.pyd"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="C:\Python25\libs"
+				AdditionalLibraryDirectories="&quot;$(ProjectDir)\..\..\debugPython&quot;;C:\Python26\include"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -117,7 +118,7 @@
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="C:\Python25\include"
+				AdditionalIncludeDirectories="C:\Python26\include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;GENERIC_DETOUR_EXPORTS"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -138,7 +139,7 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).pyd"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="C:\Python25\libs"
+				AdditionalLibraryDirectories="C:\Python26\libs"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -211,15 +212,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\python_module_gdetour.cpp"
+				RelativePath=".\python_module_pydetour.cpp"
 				>
 			</File>
 			<File
 				RelativePath=".\python_module_util.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\python_type_detour.cpp"
 				>
 			</File>
 			<File
@@ -273,7 +270,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\python_module_gdetour.h"
+				RelativePath=".\python_module_pydetour.h"
 				>
 			</File>
 			<File
@@ -295,6 +292,13 @@
 			<File
 				RelativePath=".\stdafx.h"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\targetver.h"

@@ -27,7 +27,7 @@ static PyObject * memory_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     if (self != NULL) {
 		self->ctypes = PyImport_ImportModule("ctypes");
 		if (self->ctypes == NULL) {
-			type->tp_free(self);
+			Py_DECREF(self);
 			return PyErr_Format(PyExc_NameError, "Error creating <memory> type: Required module ctypes not found.");
 		}
 		self->base = 0;

@@ -8,11 +8,19 @@ gdetour::gdetour() {
 	this->imp_add_detour = NULL;
 	this->imp_run_python_file = NULL;
 
-	HMODULE gd = LoadLibrary("gdetour.pyd");
+#ifdef _DEBUG
+	HMODULE gd = LoadLibrary("pydetour_d.pyd");
 	if (gd == NULL) {
-		MessageBox(0,"Could not load gdetour.pyd", "Error", 0);
+		MessageBox(0,"Could not load pydetour_d.pyd", "Error", 0);
 		return;
 	}
+#else
+	HMODULE gd = LoadLibrary("pydetour.pyd");
+	if (gd == NULL) {
+		MessageBox(0,"Could not load pydetour.pyd", "Error", 0);
+		return;
+	}
+#endif
 	this->imp_add_detour = (add_detour_func) GetProcAddress(gd, "add_detour");
 	if (this->imp_add_detour == NULL) {
 		MessageBox(0,"Could not find add_detour in gdetour.pyd", "Error", 0);

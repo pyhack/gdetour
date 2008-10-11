@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "python_funcs.h"
-#include "python_module_gdetour.h"
+#include "python_module_pydetour.h"
 #include "python_type_registers.h"
 
 using namespace CPPPython;
@@ -30,12 +30,14 @@ GENERIC_DETOUR_API int run_python_file(char* filename) {
 		int l = strlen(fnbuf);
 		for(int i = l; i > 0; i--) {
 			if (fnbuf[i] == '\\') {
-				strncpy(&fnbuf[i+1], filename, 1023 - i);
+				//strncpy(&fnbuf[i+1], filename, 1023 - i);
+				strncpy_s(&fnbuf[i+1], 1023 - i, filename, 1023 - i);
 				break;
 			}
 		}
 	} else {
-		strncpy(fnbuf, filename, 1023);
+		//strncpy(fnbuf, filename, 1023);
+		strncpy_s(fnbuf, 1023, filename, 1023);
 	}
 
 	P_GIL gil;

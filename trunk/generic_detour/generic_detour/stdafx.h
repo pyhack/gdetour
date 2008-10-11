@@ -16,10 +16,10 @@
 // TODO: reference additional headers your program requires here
 
 #ifdef _DEBUG
-#undef _DEBUG //We can't compile a debug version of python
-#pragma message("Warning: Mixing CRT libraries between debug and nondebug isn't good! (Don't have python debug library)")
+//#undef _DEBUG //We can't compile a debug version of python
+//#pragma message("Warning: Mixing CRT libraries between debug and nondebug isn't good! (Don't have python debug library)")
 #include "Python.h"
-#define _DEBUG
+//#define _DEBUG
 #else
 #include "Python.h"
 #endif
