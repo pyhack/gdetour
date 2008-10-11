@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="pydetour"
-	ProjectGUID="{7BA10A54-A515-4467-AC83-C66E68C3AC7C}"
-	RootNamespace="generic_detour"
+	Name="test_gdetour"
+	ProjectGUID="{07A2B9F3-E484-4BC1-8C2C-BA8B3FA41319}"
+	RootNamespace="test_pydetour"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
 	>
@@ -20,7 +20,7 @@
 			Name="Debug|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="2"
+			ConfigurationType="1"
 			CharacterSet="1"
 			>
 			<Tool
@@ -41,13 +41,11 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)\..\..\debugPython&quot;;C:\Python26\include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;GENERIC_DETOUR_EXPORTS"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				UsePrecompiledHeader="2"
-				PrecompiledHeaderFile="$(IntDir)\$(TargetName)_d.pch"
 				WarningLevel="3"
 				DebugInformationFormat="4"
 			/>
@@ -62,11 +60,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\$(ProjectName)_d.pyd"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;$(ProjectDir)\..\..\debugPython&quot;;C:\Python26\include"
 				GenerateDebugInformation="true"
-				SubSystem="2"
+				SubSystem="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -89,13 +85,15 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Copy Python Debug Library to Output"
+				CommandLine="@echo on&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\debugPython\python26_d.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\debugPython\python26_d.pdb&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="2"
+			ConfigurationType="1"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
 			>
@@ -116,10 +114,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				Optimization="0"
 				InlineFunctionExpansion="1"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="C:\Python26\include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;GENERIC_DETOUR_EXPORTS"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="2"
@@ -137,11 +135,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\$(ProjectName).pyd"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="C:\Python26\libs"
 				GenerateDebugInformation="true"
-				SubSystem="2"
+				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
 				TargetMachine="1"
@@ -178,57 +174,11 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\CPPPython.cpp"
+				RelativePath=".\gdetour_api.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\dllmain.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-						CompileAsManaged="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-						CompileAsManaged="0"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\generic_detour.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\python_funcs.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\python_module_pydetour.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\python_module_util.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\python_type_detourconfig.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\python_type_memory.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\python_type_registers.cpp"
+				RelativePath=".\test_pydetour.cpp"
 				>
 			</File>
 			<File
@@ -258,47 +208,12 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\CPPPython.h"
-				>
-			</File>
-			<File
-				RelativePath=".\generic_detour.h"
-				>
-			</File>
-			<File
-				RelativePath=".\python_funcs.h"
-				>
-			</File>
-			<File
-				RelativePath=".\python_module_pydetour.h"
-				>
-			</File>
-			<File
-				RelativePath=".\python_module_util.h"
-				>
-			</File>
-			<File
-				RelativePath=".\python_type_detourconfig.h"
-				>
-			</File>
-			<File
-				RelativePath=".\python_type_memory.h"
-				>
-			</File>
-			<File
-				RelativePath=".\python_type_registers.h"
+				RelativePath=".\gdetour_api.h"
 				>
 			</File>
 			<File
 				RelativePath=".\stdafx.h"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\targetver.h"
@@ -311,6 +226,10 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 		</Filter>
+		<File
+			RelativePath=".\ReadMe.txt"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>
