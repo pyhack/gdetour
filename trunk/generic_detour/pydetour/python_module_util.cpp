@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "python_funcs.h"
-#include "python_module_gdetour.h"
+#include "python_module_pydetour.h"
 #include "python_module_util.h"
 
 #include "CPPPython.h"

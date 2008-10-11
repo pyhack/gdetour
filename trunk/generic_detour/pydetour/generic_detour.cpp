@@ -3,7 +3,7 @@
 
 #include "stdafx.h"
 #include "generic_detour.h"
-#include "python_module_gdetour.h"
+#include "python_module_pydetour.h"
 
 
 detour_list_type detours;
