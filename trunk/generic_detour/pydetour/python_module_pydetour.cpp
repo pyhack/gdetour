@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "python_module_gdetour.h"
+#include "python_module_pydetour.h"
 #include "python_module_util.h"
 #include "python_funcs.h"
 #include "python_type_registers.h"
@@ -159,11 +159,11 @@ static PyMethodDef detour_funcs[] = {
 
 
 
-PyMODINIT_FUNC initgdetour() {
+PyMODINIT_FUNC initpydetour() {
 	//this function is automagically called on import
 
     /* Create the module and add the functions */
-    PyObject* m = Py_InitModule3("gdetour", detour_funcs, "Generic Process Detour");
+    PyObject* m = Py_InitModule3("pydetour", detour_funcs, "Generic Process Detour");
 
 	Detour_Exception = PyErr_NewException("gdetour.DetourException", NULL, NULL);
 	Detour_Exception_AlreadyInitilized = PyErr_NewException("gdetour.DetourExceptionAlreadyInitilized", Detour_Exception, NULL);

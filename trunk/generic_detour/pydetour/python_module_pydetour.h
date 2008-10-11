@@ -3,7 +3,7 @@
 
 void CallPythonDetour(GDetour &d, DETOUR_LIVE_SETTINGS &stack_live_settings);
 
-PyMODINIT_FUNC initgdetour();
+PyMODINIT_FUNC initpydetour();
 
 extern PyObject* Detour_Exception;
 extern PyObject* Detour_Exception_AlreadyInitilized;
