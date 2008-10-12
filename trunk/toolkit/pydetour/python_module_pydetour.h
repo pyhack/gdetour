@@ -1,5 +1,5 @@
 #include <map>
-#include "generic_detour.h"
+#include "pydetour.h"
 
 void CallPythonDetour(GDetour &d, DETOUR_LIVE_SETTINGS &stack_live_settings);
 

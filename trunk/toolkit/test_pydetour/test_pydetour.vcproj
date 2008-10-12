@@ -85,8 +85,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				Description="Copy Python Debug Library to Output"
-				CommandLine="@echo on&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\debugPython\python26_d.dll&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;copy &quot;$(SolutionDir)\..\debugPython\python26_d.pdb&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;"
+				Description=""
+				CommandLine=""
 			/>
 		</Configuration>
 		<Configuration
@@ -178,10 +178,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\test_pydetour.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\stdafx.cpp"
 				>
 				<FileConfiguration
@@ -200,6 +196,10 @@
 						UsePrecompiledHeader="1"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\test_pydetour.cpp"
+				>
 			</File>
 		</Filter>
 		<Filter
@@ -225,6 +225,19 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
+			<File
+				RelativePath=".\test.cmd"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="copy &quot;$(InputPath)&quot; &quot;$(TargetDir)&quot; /y"
+						Outputs="&quot;$(TargetDir)\$(InputFileName)&quot;"
+					/>
+				</FileConfiguration>
+			</File>
 		</Filter>
 		<File
 			RelativePath=".\ReadMe.txt"

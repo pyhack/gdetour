@@ -1,6 +1,6 @@
 // dllmain.cpp : Defines the entry point for the DLL application.
 #include "stdafx.h"
-#include "generic_detour.h"
+#include "pydetour.h"
 #include "python_funcs.h"
 
 

@@ -8,7 +8,7 @@
 #include "structmember.h"
 
 
-#include "generic_detour.h"
+#include "pydetour.h"
 
 using namespace CPPPython;
 

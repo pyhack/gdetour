@@ -2,7 +2,7 @@
 //
 
 #include "stdafx.h"
-#include "generic_detour.h"
+#include "pydetour.h"
 #include "python_module_pydetour.h"
 
 

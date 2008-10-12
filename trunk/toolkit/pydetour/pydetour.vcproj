@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)\..\..\debugPython&quot;;C:\Python26\include"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)\..\..\..\python\include&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;GENERIC_DETOUR_EXPORTS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -64,7 +64,7 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName)_d.pyd"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="&quot;$(ProjectDir)\..\..\debugPython&quot;;C:\Python26\include"
+				AdditionalLibraryDirectories="&quot;$(ProjectDir)\..\..\..\python\libs&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
