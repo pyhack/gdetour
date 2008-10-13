@@ -282,7 +282,7 @@ namespace CPPPython {
 			throw new CPPPythonException("PModule objects cannot wrap NULL objects");
 		}
 		if (PyModule_Check(obj) == 0) {
-			throw new CPPPythonException("PModule objects must have valid strings to wrap");
+			throw new CPPPythonException("PModule objects must have valid modules to wrap");
 		}
 		if (!stealReferance && obj) {
 			Py_INCREF(obj);
@@ -294,7 +294,7 @@ namespace CPPPython {
 		return ret;
 	}
 	PModule PModule::getModule(const char *name) {
-		PModule ret = PModule(::PyImport_AddModule(name));
+		PModule ret = PModule(::PyImport_AddModule(name)); //borrowed
 		return ret;
 	}
 	PModule PModule::getNewModule(const char *name) {

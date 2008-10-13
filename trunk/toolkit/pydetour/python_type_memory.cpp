@@ -12,7 +12,7 @@ typedef struct memory {
     PyObject_HEAD
 	PyObject* ctypes;
 
-	unsigned void* base;
+	BYTE* base;
 	PyObject* autoInc;
 
 
@@ -25,7 +25,7 @@ static PyObject * memory_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     memory *self;
     self = (memory *)type->tp_alloc(type, 0);
     if (self != NULL) {
-		self->ctypes = PyImport_ImportModule("ctypes");
+		self->ctypes = PyImport_ImportModule("ctypes"); //new ref, cleared later in memory_dealloc
 		if (self->ctypes == NULL) {
 			Py_DECREF(self);
 			return PyErr_Format(PyExc_NameError, "Error creating <memory> type: Required module ctypes not found.");
@@ -38,6 +38,7 @@ static PyObject * memory_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 }
 static void memory_dealloc(memory* self) {
 	Py_CLEAR(self->ctypes);
+	Py_CLEAR(self->autoInc);
 	self->ob_type->tp_free((PyObject*)self);
 }
 static int memory_init(memory *self, PyObject *args, PyObject *kwds) {
@@ -98,7 +99,7 @@ static PyObject* memory_dword(memory* self, PyObject* args) {
 	} else {
 		ret = PyTuple_New(count);
 		for (int i = 0; i < count; i++) {
-			PyTuple_SetItem(ret, i, PyLong_FromLong(*((long*)self->base)+i)); //hooray pointer math and ref stealing tuple funcs
+			PyTuple_SetItem(ret, i, PyLong_FromLong(*((long*)self->base+i))); //hooray pointer math and ref stealing tuple funcs
 		}
 	}
 	if (self->autoInc == Py_True) {
@@ -120,7 +121,7 @@ static PyObject* memory_qword(memory* self, PyObject* args) {
 	} else {
 		ret = PyTuple_New(count);
 		for (int i = 0; i < count; i++) {
-			PyTuple_SetItem(ret, i, PyLong_FromLong(*((PY_LONG_LONG*)self->base)+i)); //hooray pointer math and ref stealing tuple funcs
+			PyTuple_SetItem(ret, i, PyLong_FromLong(*((PY_LONG_LONG*)self->base+i))); //hooray pointer math and ref stealing tuple funcs
 		}
 	}
 	if (self->autoInc == Py_True) {
@@ -307,7 +308,9 @@ bool add_module_type_memory(PyObject* m) {
 	PyModule_AddObject(m, "memoryType", (PyObject *)&memoryType); //steals ref
 
 	PObject mT((PyObject*)&memoryType);
-	PyModule_AddObject(m, "memory", mT.call(NULL)); //steals ref
+	PObject myMem = mT.call(NULL);
+	myMem.incRef();
+	PyModule_AddObject(m, "memory", myMem); //steals ref!!
 
 	return true;
 }

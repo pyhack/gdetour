@@ -32,6 +32,14 @@ namespace CPPPython {
 		protected:
 			PyObject* myObject;
 		public:
+			/*
+				When you create a PObject, the default action is to INCREF the reference, 
+				and DECREF it when the object dies. This is suitable for passing in BORROWED references
+				from Python's API. If you don't want an an auto-INCREF, pass 1 as the second arg (stealReferance).
+
+				If you don't want the auto-DECREF, set del_on_destruct to false.
+
+			*/
 			PObject();
 			void incRef();
 			void decRef();

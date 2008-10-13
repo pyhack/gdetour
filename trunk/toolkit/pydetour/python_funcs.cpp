@@ -42,7 +42,7 @@ GENERIC_DETOUR_API int run_python_file(char* filename) {
 
 	P_GIL gil;
 
-	PyObject* pyfile = PyFile_FromString(fnbuf,"r");
+	PyObject* pyfile = PyFile_FromString(fnbuf,"r"); //new ref
 	if (PyErr_Occurred()) { 
 		PyErr_Print(); 
 		OutputDebugString("pyerror occured reading file");
@@ -53,7 +53,7 @@ GENERIC_DETOUR_API int run_python_file(char* filename) {
 		return 0;
 	}
 
-	FILE* f = PyFile_AsFile(pyfile);
+	FILE* f = PyFile_AsFile(pyfile); //no ref
 	PyRun_File(f,fnbuf, Py_file_input, pyGlobals, pyLocals);
 
 	if (PyErr_Occurred()) {
@@ -92,9 +92,11 @@ void Python_Initialize() {
 	HMODULE pyhandle = GetModuleHandle("python26.dll");
 #endif
 
+	char pythonhome[MAX_PATH];
+	ZeroMemory(python_path, sizeof(python_path));
+	ZeroMemory(python_path, sizeof(pythonhome));
 
-	ZeroMemory(python_path, MAX_PATH);
-	GetModuleFileName(pyhandle, python_path, MAX_PATH-20);
+	GetModuleFileName(pyhandle, python_path, MAX_PATH-50);
 
 	for(int i = MAX_PATH - 1; i > 0; i--) {
 		char* cur = (char*)python_path + i;
@@ -104,23 +106,16 @@ void Python_Initialize() {
 		*cur = '\0';
 	}
 
-
-	//Py_SetProgramName(python_path);
-
+	memcpy(pythonhome, "PYTHONHOME=", 12);
+	strcat_s(pythonhome, python_path);
+	pythonhome[strlen(pythonhome)-1] = 0;
+	_putenv(pythonhome);
 
 	Py_Initialize();
 	if (!Py_IsInitialized()) {
 		OutputDebugString("Python could not be initialized\n");
 	}
 	PyEval_InitThreads();
-
-	char tempbuf[MAX_PATH+256];
-	ZeroMemory(tempbuf, MAX_PATH+256);
-	sprintf_s((char*)&tempbuf, MAX_PATH+100, "import sys\nsys.path = [x.replace('.\\\\', r'%s\\') for x in sys.path]\nimport site", python_path);
-
-	
-
-
 
 
 	PModule mainmod = PModule::getModule("__main__");
@@ -129,7 +124,7 @@ void Python_Initialize() {
 	pyGlobals = d;
 	pyLocals = d;
 
-	PyRun_SimpleString(tempbuf);
+	//PyRun_SimpleString(tempbuf);
 
 	//These three do import gdetour
 	//initgdetour();
