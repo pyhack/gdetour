@@ -20,12 +20,12 @@ GENERIC_DETOUR_API PyObject* run_python_string(char* pycode) {
 	}
 	return ret;
 }
-GENERIC_DETOUR_API int run_python_file(char* filename) {
+GENERIC_DETOUR_API int run_python_file(char* filename, bool debugging) {
 	char fnbuf[1024];
 	memset(&fnbuf, 0, sizeof(fnbuf));
 	if (filename[1] != ':') {
 		//assume that this is a relative path from this dll
-		HMODULE h = GetModuleHandle("gdetour.dll");
+		HMODULE h = GetModuleHandle("pydetour.pyd");
 		GetModuleFileName(h, fnbuf, 1022 - strlen(filename));
 		int l = strlen(fnbuf);
 		for(int i = l; i > 0; i--) {
@@ -43,6 +43,10 @@ GENERIC_DETOUR_API int run_python_file(char* filename) {
 	P_GIL gil;
 
 	PyObject* pyfile = PyFile_FromString(fnbuf,"r"); //new ref
+
+
+
+
 	if (PyErr_Occurred()) { 
 		PyErr_Print(); 
 		OutputDebugString("pyerror occured reading file");
@@ -54,15 +58,39 @@ GENERIC_DETOUR_API int run_python_file(char* filename) {
 	}
 
 	FILE* f = PyFile_AsFile(pyfile); //no ref
+
+	if (PyErr_Occurred()) {
+		//TODO: bail
+		PyErr_Clear();
+	}
+
 	PyRun_File(f,fnbuf, Py_file_input, pyGlobals, pyLocals);
 
 	if (PyErr_Occurred()) {
+		
+		if (debugging) {
+			PyObject *a, *b, *c;
+			PyErr_Fetch(&a, &b, &c);
+			PModule traceback = PModule::importModule("traceback", pyGlobals, pyLocals);
+			PObject traceback_print = traceback.getAttr("print_tb");
+			traceback_print.call(c, NULL);
+			printf("\n\nBreaking into debugger...\n");
+			PModule dbg = PModule::importModule("pdb", pyGlobals, pyLocals);
+			PObject dbg_run = dbg.getAttr("post_mortem");
+			dbg_run.call(c, NULL);
+			Py_XDECREF(a);
+			Py_XDECREF(b);
+			Py_XDECREF(c);
+		} else {
+			PyErr_Clear();
+		}
 		//probably an exception
 		OutputDebugString("pyerror occured running file");
 		PyErr_Print();
 		Py_XDECREF(pyfile);
 		return 0;
 	}
+
 
 	Py_DECREF(pyfile);
 	return 1;
@@ -87,10 +115,8 @@ static char python_path[MAX_PATH];
 void Python_Initialize() {
 
 #ifdef _DEBUG
+	//Here we set up PythonHome to our debugging version a few directories up
 	HMODULE pyhandle = GetModuleHandle("python26_d.dll");
-#else
-	HMODULE pyhandle = GetModuleHandle("python26.dll");
-#endif
 
 	char pythonhome[MAX_PATH];
 	ZeroMemory(python_path, sizeof(python_path));
@@ -111,6 +137,10 @@ void Python_Initialize() {
 	pythonhome[strlen(pythonhome)-1] = 0;
 	_putenv(pythonhome);
 
+#else
+	//Here we used the installed version of Python at C:\Python26 (we assume)
+	//HMODULE pyhandle = GetModuleHandle("python26.dll");
+#endif
 	Py_Initialize();
 	if (!Py_IsInitialized()) {
 		OutputDebugString("Python could not be initialized\n");
@@ -136,9 +166,14 @@ void Python_Initialize() {
 void Python_Unload() {
 	P_GIL gil;
 
+
+
 	pyGlobals = NULL;
 	pyLocals = NULL;
 
+	printf("python about to unload\n");
+
 	Py_Finalize();
 
+	printf("python unloaded\n");
 }

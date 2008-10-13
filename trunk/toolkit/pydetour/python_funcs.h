@@ -18,7 +18,7 @@ extern CPPPython::PDict pyGlobals;
 GENERIC_DETOUR_API void run_test();
 
 GENERIC_DETOUR_API PyObject* run_python_string(char* pycode);
-GENERIC_DETOUR_API int run_python_file(char* filename);
+GENERIC_DETOUR_API int run_python_file(char* filename, bool debugging=true);
 
 void Python_Initialize();
 void Python_Unload();

@@ -200,6 +200,12 @@ namespace CPPPython {
 		}
 		return true;
 	}
+	PObject PObject::call() {
+		if (!this->myObject) { throw new NULLPyObjectException(); }
+		//A null argument MUST BE PASSED at the end!
+		PyObject* ret = PyObject_CallFunctionObjArgs(this->myObject, NULL);
+		return PObject(ret, true);
+	}
 	PObject PObject::call(PyObject* arg0) {
 		if (!this->myObject) { throw new NULLPyObjectException(); }
 		//A null argument MUST BE PASSED at the end!

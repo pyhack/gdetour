@@ -78,6 +78,7 @@ namespace CPPPython {
 
 
 			bool isCallable() const;
+			PObject call();
 			PObject call(PyObject* arg0); //A NULL argument MUST BE PASSED at the end!
 			PObject call(PyObject* arg0,PyObject* arg1); //A NULL argument MUST BE PASSED at the end!
 			PObject call(PyObject* arg0,PyObject* arg1,PyObject* arg2); //A NULL argument MUST BE PASSED at the end!
