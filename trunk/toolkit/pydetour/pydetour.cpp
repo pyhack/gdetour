@@ -8,15 +8,25 @@
 
 detour_list_type detours;
 
+//#define DETOUR_DEBUG
 
 GDetour::GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourCallback callback, int type) {
 	//type is unused. provided for forward compat.
+#ifdef DETOUR_DEBUG
+	if (overwrite_length < 6) {
+		return; //need 6 bytes at minimum for JMP in
+	}
+	if (overwrite_length > sizeof(this->original_code)-6) {
+		return; //need 6 bytes in backed up code for JMP return
+	}
+#else
 	if (overwrite_length < 5) {
 		return; //need 5 bytes at minimum for JMP in
 	}
 	if (overwrite_length > sizeof(this->original_code)-5) {
 		return; //need 5 bytes in backed up code for JMP return
 	}
+#endif
 	this->Applied = false;
 	this->address = address;
 	memset(&this->live_settings, 0x0, sizeof(this->live_settings)); //Zero out live settings
@@ -32,8 +42,12 @@ GDetour::GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourC
 
 	memcpy(this->original_code, this->address, this->original_code_len);
 
+	DWORD dummy = 0;
+	VirtualProtect(this->original_code, sizeof(this->original_code), PAGE_EXECUTE_READWRITE, &dummy);
+
+
 	this->original_code[this->original_code_len] = 0xE9; //JMP
-	DWORD* retJmp = (DWORD*)&this->original_code[this->original_code_len+1];
+	DWORD* retJmp = (DWORD*)&this->original_code[this->original_code_len+1]; //retJmp is pointer to place to write jmp address
 	*retJmp = CalculateRelativeJMP((DWORD)&this->original_code[this->original_code_len], (DWORD) (this->address + this->original_code_len));
 	
 	this->callbackFunction = callback;
@@ -55,12 +69,19 @@ bool GDetour::Apply() {
 	DWORD* jaddr;
 	addr = (BYTE*) this->address;
 	jaddr = (DWORD*) (addr + 1);
-	addr[0] = 0xE8; //A Call!
 
+
+#ifdef DETOUR_DEBUG
+	addr[0] = 0xCC; //INT 3
+	addr++;
+	jaddr = (DWORD*) ((BYTE*) jaddr + 1); //ah, the joy of pointers
+#endif
+	addr[0] = 0xE8; //A Call!
 	jaddr[0] = CalculateRelativeJMP((DWORD) addr, (DWORD) &detour_call_dest);
 	for(DWORD i = 5; i < this->original_code_len; i++) {
 		addr[i] = 0x90; //Set extra bytes to NOP
 	}
+
 	VirtualProtect(this->address, this->original_code_len, oldProt, &dummy);
 
 	this->Applied = true;
@@ -112,30 +133,36 @@ ESP+C: [arg 2]
 */
 //TODO: 
 	__asm {
+		//INT 3
 		PUSHFD
 		PUSHAD
-		SUB ESP, 12 //sizeof(DETOUR_GATEWAY_OPTIONS)
+		SUB ESP, 20 //sizeof(DETOUR_GATEWAY_OPTIONS)
 		CALL detour_c_call_dest //returns nothing, all options are in above struct
-		ADD ESP, 12 //skip sizeof(DETOUR_GATEWAY_OPTIONS)
+		ADD ESP, 20 //skip sizeof(DETOUR_GATEWAY_OPTIONS)
 		POPAD //32 bytes
-		CMP [ESP-40], 1 //check DETOUR_GATEWAY_OPTIONS[1] for 1
+		CMP [ESP-44], 1 //32 + 4popad + 12 check DETOUR_GATEWAY_OPTIONS[2] for 1
 		JE do_return_to_orig
 
 		POPFD //4 bytes
-		ADD ESP, [ESP-40] //move stack by DETOUR_GATEWAY_OPTIONS[0] bytes
+		ADD ESP, [ESP-44] //move stack by DETOUR_GATEWAY_OPTIONS[0] bytes
+		ADD ESP, 4 //knock out our return address
 		RET
 
 do_return_to_orig:
 		POPFD // 4 bytes
 		ADD ESP, 4 //knock out our return address
-		JMP DWORD PTR [ESP-52] //jmp to DETOUR_GATEWAY_OPTIONS[2]
+		JMP DWORD PTR [ESP-56] //jmp to DETOUR_GATEWAY_OPTIONS[2]
 	}
 }
 
 void default_callback(GDetour &d, DETOUR_LIVE_SETTINGS &stack_live_data) {
 	char tempstring[512];
 	sprintf_s(tempstring, sizeof(tempstring),"func: 0x%x, ret: 0x%x,\n R[EAX] = 0x%x,\n R[ECX] = 0x%x,\n R[EDX] = 0x%x,\n R[EBX] = 0x%x,\n R[ESP] = 0x%x,\n R[EBP] = 0x%x,\n R[ESI] = 0x%x,\n R[EDI] = 0x%x,\n flags = 0x%x,\n arg0 = 0x%x,\n arg1 = 0x%x\n",
+#ifdef DETOUR_DEBUG
+		stack_live_data.ret_addr-6,
+#else
 		stack_live_data.ret_addr-5,
+#endif
 		stack_live_data.caller_ret,
 		stack_live_data.registers.eax,
 		stack_live_data.registers.ecx,
@@ -162,7 +189,12 @@ void detour_c_call_dest(
 
 	memset(&stack_gateway_opt, 0, sizeof(stack_gateway_opt));
 
+#ifdef DETOUR_DEBUG
+	detour_list_type::iterator dl = detours.find((BYTE*)(stack_live_data.ret_addr-6));
+#else
 	detour_list_type::iterator dl = detours.find((BYTE*)(stack_live_data.ret_addr-5));
+#endif
+
 	if (dl == detours.end()) {
 		sprintf_s(tempstring, sizeof(tempstring), "Called detour from function 0x%x and could not find a registered handler. Crash is likely.", (stack_live_data.ret_addr-5));
 		OutputDebugString(tempstring);
@@ -189,6 +221,13 @@ void detour_c_call_dest(
 	
 	LeaveCriticalSection(&d.my_critical_section);
 
+	stack_gateway_opt.guard_bottom = 0xCCCCCCCC;
+	stack_gateway_opt.guard_top = 0xCCCCCCCC;
+	/*
+	stack_gateway_opt.bytes_to_pop_on_ret = 0x04040404;
+	stack_gateway_opt.call_original_on_return = 0x08080808;
+	stack_gateway_opt.original_code = (BYTE*) 0x0c0c0c0c;
+	/* */
 }
 
 
@@ -236,7 +275,7 @@ DWORD CalculateRelativeJMP(DWORD jmp_address, DWORD jmp_destination, int jmp_ope
 	//JE == 2 BYTEs, etc
 	//this function assumes that you will be specifying the absolute offset as a DWORD (4 BYTEs)
 	if (jmp_address > jmp_destination) {
-		//2s complement for a negitive JMP
+		//2s complement for a negative JMP
 		DWORD a = ((jmp_address + jmp_operand_length + 4) - jmp_destination);
 		a = ~a;
 		a = a + 1;

@@ -26,9 +26,11 @@ struct REGISTERS {
 	DWORD eax;
 };
 struct DETOUR_GATEWAY_OPTIONS {
-	BYTE*		original_code;				//8
-	int			call_original_on_return;	//4
-	int			bytes_to_pop_on_ret;		//0
+	int guard_top;// = 0xcccccc;//10
+	BYTE*		original_code;				//c
+	int			call_original_on_return;	//8
+	int			bytes_to_pop_on_ret;		//4
+	int guard_bottom;// = 0xcccccc; //0
 };
 struct DETOUR_LIVE_SETTINGS {
 	REGISTERS	registers; //10

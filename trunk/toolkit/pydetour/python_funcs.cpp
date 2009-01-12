@@ -21,6 +21,10 @@ GENERIC_DETOUR_API PyObject* run_python_string(char* pycode) {
 	return ret;
 }
 GENERIC_DETOUR_API int run_python_file(char* filename, bool debugging) {
+	//Return values:
+	//0 - Success
+	//1 - Error reading / opening file
+	//2 - Python exception reading file
 	char fnbuf[1024];
 	memset(&fnbuf, 0, sizeof(fnbuf));
 	if (filename[1] != ':') {
@@ -54,7 +58,7 @@ GENERIC_DETOUR_API int run_python_file(char* filename, bool debugging) {
 	if(pyfile==NULL){
 		OutputDebugString("pyfile is null");
 		Py_XDECREF(pyfile);
-		return 0;
+		return 1;
 	}
 
 	FILE* f = PyFile_AsFile(pyfile); //no ref
@@ -67,33 +71,34 @@ GENERIC_DETOUR_API int run_python_file(char* filename, bool debugging) {
 	PyRun_File(f,fnbuf, Py_file_input, pyGlobals, pyLocals);
 
 	if (PyErr_Occurred()) {
-		
 		if (debugging) {
 			PyObject *a, *b, *c;
-			PyErr_Fetch(&a, &b, &c);
-			PModule traceback = PModule::importModule("traceback", pyGlobals, pyLocals);
-			PObject traceback_print = traceback.getAttr("print_tb");
-			traceback_print.call(c, NULL);
+			PyErr_Fetch(&a, &b, &c); //we get refs
+			Py_INCREF(a); Py_INCREF(b); Py_INCREF(c); //we now have 2 refs
+			PyErr_Restore(a, b, c); //steals, we now have 1 ref
+			PyErr_Print();
+			//PyErr_Restore(a, b, c);
+			//PModule traceback = PModule::importModule("traceback", pyGlobals, pyLocals);
+			//PObject traceback_print = traceback.getAttr("print_tb");
+			//traceback_print.call(c, NULL);
 			printf("\n\nBreaking into debugger...\n");
 			PModule dbg = PModule::importModule("pdb", pyGlobals, pyLocals);
 			PObject dbg_run = dbg.getAttr("post_mortem");
 			dbg_run.call(c, NULL);
-			Py_XDECREF(a);
-			Py_XDECREF(b);
-			Py_XDECREF(c);
+			Py_XDECREF(a); Py_XDECREF(b); Py_XDECREF(c); //and now we have 0 ref again
 		} else {
-			PyErr_Clear();
+			PyErr_Print();
 		}
 		//probably an exception
 		OutputDebugString("pyerror occured running file");
-		PyErr_Print();
+
 		Py_XDECREF(pyfile);
-		return 0;
+		return 2;
 	}
 
 
 	Py_DECREF(pyfile);
-	return 1;
+	return 0;
 }
 
 ////////////////////////////////////////////////////////
@@ -146,6 +151,7 @@ void Python_Initialize() {
 		OutputDebugString("Python could not be initialized\n");
 	}
 	PyEval_InitThreads();
+	
 
 
 	PModule mainmod = PModule::getModule("__main__");
@@ -161,7 +167,7 @@ void Python_Initialize() {
 	//PModule gd = PModule::importModule("gdetour", pyGlobals, pyLocals);
 	//mainmod.AddObject("gdetour", gd);
 
-
+	PyThreadState* _save = PyEval_SaveThread();	//required to release the GIL we got for free by initializing Python before this thread vanishes
 }
 void Python_Unload() {
 	P_GIL gil;
