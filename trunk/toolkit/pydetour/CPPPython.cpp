@@ -113,7 +113,7 @@ namespace CPPPython {
 	std::string PObject::getStr() const {
 		PyObject* tmp = PyObject_Str(this->myObject); //new ref
 		if (!tmp) {
-			throw CPPPythonException("Could not get repr() of this object");
+			throw CPPPythonException("Could not get str() of this object");
 		}
 		std::string ret(::PyString_AsString(tmp));
 		Py_DECREF(tmp);
