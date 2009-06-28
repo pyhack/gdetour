@@ -74,17 +74,24 @@ GENERIC_DETOUR_API int run_python_file(char* filename, bool debugging) {
 		if (debugging) {
 			PyObject *a, *b, *c;
 			PyErr_Fetch(&a, &b, &c); //we get refs
-			Py_INCREF(a); Py_INCREF(b); Py_INCREF(c); //we now have 2 refs
+			Py_INCREF(a); Py_INCREF(b); //we now have 2 refs of a and b
+			if (c) {
+				Py_INCREF(c); //I now have 2 refs of c too. We have to special case this because (a) could be a SyntaxError, making this (c) NULL
+			}
 			PyErr_Restore(a, b, c); //steals, we now have 1 ref
 			PyErr_Print();
 			//PyErr_Restore(a, b, c);
 			//PModule traceback = PModule::importModule("traceback", pyGlobals, pyLocals);
 			//PObject traceback_print = traceback.getAttr("print_tb");
 			//traceback_print.call(c, NULL);
-			printf("\n\nBreaking into debugger...\n");
-			PModule dbg = PModule::importModule("pdb", pyGlobals, pyLocals);
-			PObject dbg_run = dbg.getAttr("post_mortem");
-			dbg_run.call(c, NULL);
+			if (c) {
+				printf("\n\nBreaking into debugger...\n");
+				PModule dbg = PModule::importModule("pdb", pyGlobals, pyLocals);
+				PObject dbg_run = dbg.getAttr("post_mortem");
+				dbg_run.call(c, NULL);
+			} else {
+				printf("\n\nCan't debug exceptions with no traceback.");
+			}
 			Py_XDECREF(a); Py_XDECREF(b); Py_XDECREF(c); //and now we have 0 ref again
 		} else {
 			PyErr_Print();
