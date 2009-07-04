@@ -20,11 +20,26 @@ GENERIC_DETOUR_API PyObject* run_python_string(char* pycode) {
 	}
 	return ret;
 }
+
+/*
+Error codes are 32-bit values (bit 31 is the most significant bit).
+Bit 29 is reserved for application-defined error codes; no system error code has this bit set.
+If you are defining an error code for your application, set this bit to one.
+
+Source: http://msdn.microsoft.com/en-us/library/ms679360%28VS.85%29.aspx
+
+*/
+#define BIT_29 (1 << 29)
+
+GENERIC_DETOUR_API int run_python_file_error_success = 0;
+GENERIC_DETOUR_API int run_python_file_error_open = BIT_29 + 3;
+GENERIC_DETOUR_API int run_python_file_error_exception = BIT_29 + 4;
+
 GENERIC_DETOUR_API int run_python_file(char* filename, bool debugging) {
 	//Return values:
 	//0 - Success
-	//1 - Error reading / opening file
-	//2 - Python exception reading file
+	//Others, see above
+
 	char fnbuf[1024];
 	memset(&fnbuf, 0, sizeof(fnbuf));
 	if (filename[1] != ':') {
@@ -58,7 +73,7 @@ GENERIC_DETOUR_API int run_python_file(char* filename, bool debugging) {
 	if(pyfile==NULL){
 		OutputDebugString("pyfile is null");
 		Py_XDECREF(pyfile);
-		return 1;
+		return run_python_file_error_open;
 	}
 
 	FILE* f = PyFile_AsFile(pyfile); //no ref
@@ -100,12 +115,12 @@ GENERIC_DETOUR_API int run_python_file(char* filename, bool debugging) {
 		OutputDebugString("pyerror occured running file");
 
 		Py_XDECREF(pyfile);
-		return 2;
+		return run_python_file_error_exception;
 	}
 
 
 	Py_DECREF(pyfile);
-	return 0;
+	return run_python_file_error_success;
 }
 
 ////////////////////////////////////////////////////////
