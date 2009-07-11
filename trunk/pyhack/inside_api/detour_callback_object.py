@@ -41,6 +41,10 @@ class DetourCallbackObject:
         """Writes length bytes to address"""
         return pydetour.util.write(address, length, bytes)
 
+        
+    def debug_break(self):
+        pydetour.break_into_debugger()
+        
     def dump(self):
         """Convient utility function to dump information about this function call"""
         print "Dump for call to 0x%08x from 0x%08x:"%(self.address, self.caller)
@@ -54,37 +58,50 @@ class DetourCallbackObject:
         print "\t\tESI: 0x%08x" % (self.registers.esi)
         print "\t\tEDI: 0x%08x" % (self.registers.edi)
         print "\t\tflags: 0x%08x" % (self.registers.flags)
-        for i in xrange(1, 8):
-            if i == 1:
+        self.dump_stack()
+    def dump_stack(self, dword_offset=0, count=8):
+        for i in xrange(dword_offset, dword_offset+count):
+            if i == 0:
                 t = "   "
             else:
-                t = "+%02X"%((i-1)*4)
+                t = "+%02X"%((i)*4)
             try:
-                a = self.getArg(i)
+                a = self.getStackValue(i)
             except pydetour.DetourAccessViolationException:
                 print "\t[ESP%s]: Access Violation"% (t)
 
             try:
-                b = self.getStringArg(i)
-                print "\t[ESP%s]: 0x%08x ('%s')" % (t, a, b)
+                b = self.getStringStackValue(i)
+                if len(b) == 1:
+                    #might be unicode
+                    b = self.getUnicodeStackValue(i)
+                    b = b.encode("ascii", "replace");
+                    print "\t[ESP%s]: 0x%08x (U: '%s')" % (t, a, b)
+                else:
+                    print "\t[ESP%s]: 0x%08x ('%s')" % (t, a, b)
             except pydetour.DetourAccessViolationException:
                 print "\t[ESP%s]: 0x%08x" % (t, a)
 
-    def getArg(self, attrNum):
-        """1 based argument getter function"""
-        add = (attrNum - 1) * 4 #4 byte paramters
+    def getStackValue(self, stackNum):
+        """Returns a value from the stack. 0 = ESP."""
+        add = stackNum * 4 #4 byte paramters
         return pydetour.util.readDWORD(self.registers.esp+add)
 
-    def setArg(self, attrNum, dword):
-        """1 based argument setter function"""
-        add = (attrNum - 1) * 4 #4 byte paramters
+    def setStackValue(self, stackNum, dword):
+        """Returns a value from the stack. 0 = ESP."""
+        add = stackNum * 4 #4 byte paramters
         return pydetour.util.writeDWORD(self.registers.esp+add, dword)
     
-    def getStringArg(self, attrNum):
-        """1 based argument getted function. Looks up an ASCII string pointed to by the argument."""
-        addr = self.getArg(attrNum)
+    def getStringStackValue(self, stackNum):
+        """Returns a string from a stack pointer. 0 = ESP. Looks up an ASCII string pointed at by stack offset."""
+        addr = self.getStackValue(stackNum)
         return pydetour.util.readASCIIZ(addr)
 
+    def getUnicodeStackValue(self, stackNum):
+        """Returns a unicode string from a stack pointer. 0 = ESP. Looks up a wchar_t string pointed at by stack offset."""
+        addr = self.getStackValue(stackNum)
+        return pydetour.util.readUnicodeZ(addr)
+        
     def getConfiguration(self):
         n = ["bytesToPop", "executeOriginal"]
         return dict(zip(n, pydetour.getDetourSettings(self.address)))
