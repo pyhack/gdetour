@@ -60,6 +60,10 @@ class DetourCallbackObject:
         print "\t\tflags: 0x%08x" % (self.registers.flags)
         self.dump_stack()
     def dump_stack(self, dword_offset=0, count=8):
+        return self._dump_memory(self.registers.esp, dword_offset, count, "ESP")
+        
+    def _dump_memory(self, addr, dword_offset=0, count=8, addr_lbl="X"):
+        #TODO: use addr variable
         for i in xrange(dword_offset, dword_offset+count):
             if i == 0:
                 t = "   "
@@ -76,12 +80,15 @@ class DetourCallbackObject:
                     #might be unicode
                     b = self.getUnicodeStackValue(i)
                     b = b.encode("ascii", "replace");
-                    print "\t[ESP%s]: 0x%08x (U: '%s')" % (t, a, b)
+                    print "\t[%s%s]: 0x%08x (U: '%s')" % (addr_lbl, t, a, b)
                 else:
-                    print "\t[ESP%s]: 0x%08x ('%s')" % (t, a, b)
+                    print "\t[%s%s]: 0x%08x ('%s')" % (addr_lbl, t, a, b)
             except pydetour.DetourAccessViolationException:
                 print "\t[ESP%s]: 0x%08x" % (t, a)
-
+    @property
+    def memory(self):
+        return pydetour.memory
+        
     def getStackValue(self, stackNum):
         """Returns a value from the stack. 0 = ESP."""
         add = stackNum * 4 #4 byte paramters
@@ -103,7 +110,7 @@ class DetourCallbackObject:
         return pydetour.util.readUnicodeZ(addr)
         
     def getConfiguration(self):
-        n = ["bytesToPop", "executeOriginal"]
+        n = ["bytesToPop", "executeOriginal", "originalCodeAddress"]
         return dict(zip(n, pydetour.getDetourSettings(self.address)))
 
     def setConfiguration(self, settingsDict):
