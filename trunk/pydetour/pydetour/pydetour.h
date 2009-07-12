@@ -30,6 +30,7 @@ struct DETOUR_GATEWAY_OPTIONS {
 	BYTE*		original_code;				//c
 	int			call_original_on_return;	//8
 	int			bytes_to_pop_on_ret;		//4
+	BYTE*		address_of_new_retn;
 	int guard_bottom;// = 0xcccccc; //0
 };
 struct DETOUR_LIVE_SETTINGS {
@@ -47,6 +48,7 @@ class GDetour {
 		BYTE*		address;
 		bool		Applied;
 
+		BYTE		retn_code[5]; //overallocation
 		BYTE		original_code[32];
 		DWORD		original_code_len;
 

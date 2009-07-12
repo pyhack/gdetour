@@ -5,6 +5,8 @@
 #include "pydetour.h"
 #include "python_module_pydetour.h"
 
+char* guard_top = "Guard - Top";
+char* guard_bottom = "Guard - Bottom";
 
 detour_list_type detours;
 
@@ -31,11 +33,13 @@ GDetour::GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourC
 	this->address = address;
 	memset(&this->live_settings, 0x0, sizeof(this->live_settings)); //Zero out live settings
 	memset((BYTE*)&this->original_code, 0xCC, sizeof(this->original_code)); //fill with breakpoint
+	memset((BYTE*)&this->retn_code, 0x00, sizeof(this->retn_code)); //fill with zeros
+
 	this->original_code_len = overwrite_length;
 
-	this->gateway_opt.bytes_to_pop_on_ret = bytes_to_pop;
+	this->gateway_opt.address_of_new_retn = (BYTE*)&this->retn_code;
 	this->gateway_opt.call_original_on_return = false;
-
+	this->gateway_opt.bytes_to_pop_on_ret = bytes_to_pop;
 	this->gateway_opt.original_code = (BYTE*)&this->original_code;
 
 	InitializeCriticalSection(&this->my_critical_section);
@@ -43,7 +47,12 @@ GDetour::GDetour(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourC
 	memcpy(this->original_code, this->address, this->original_code_len);
 
 	DWORD dummy = 0;
+	VirtualProtect(this->retn_code, sizeof(this->retn_code), PAGE_EXECUTE_READWRITE, &dummy);
 	VirtualProtect(this->original_code, sizeof(this->original_code), PAGE_EXECUTE_READWRITE, &dummy);
+	this->retn_code[0] = 0xC2; //retn
+	*(&this->retn_code[1]) = bytes_to_pop;
+	this->retn_code[3] = 0xCC;
+	this->retn_code[4] = 0xCC;
 
 
 	this->original_code[this->original_code_len] = 0xE9; //JMP
@@ -134,30 +143,30 @@ ESP+C: [arg 2]
 //TODO: 
 	__asm {
 		//INT 3
-		PUSHFD
-		PUSHAD
-		SUB ESP, 20 //sizeof(DETOUR_GATEWAY_OPTIONS)
+		PUSHFD //-4 bytes [-4]
+		PUSHAD //-32 bytes [-36]
+		SUB ESP, SIZE DETOUR_GATEWAY_OPTIONS //- sizeof(DETOUR_GATEWAY_OPTIONS)
 		CALL detour_c_call_dest //returns nothing, all options are in above struct
-		ADD ESP, 20 //skip sizeof(DETOUR_GATEWAY_OPTIONS)
-		POPAD //32 bytes
-		CMP [ESP-44], 1 //32 + 4popad + 12 check DETOUR_GATEWAY_OPTIONS[2] for 1
+		//INT 3
+		ADD ESP, SIZE DETOUR_GATEWAY_OPTIONS //+ skip sizeof(DETOUR_GATEWAY_OPTIONS)
+		POPAD //+32 bytes [-4]
+		CMP [ESP-32-SIZE DETOUR_GATEWAY_OPTIONS+(4*2)], 1 //32 + 4popad + 12 check DETOUR_GATEWAY_OPTIONS[2] for 1
 		JE do_return_to_orig
 
-		POPFD //4 bytes
-		ADD ESP, [ESP-44] //move stack by DETOUR_GATEWAY_OPTIONS[0] bytes
+		POPFD //4 bytes [0]
 		ADD ESP, 4 //knock out our return address
-		RET
+		JMP DWORD PTR [ESP-32-4-SIZE DETOUR_GATEWAY_OPTIONS+(4*4)] //jmp to new RETN command, which fixes up stack by DETOUR_GATEWAY_OPTIONS[3] bytes
 
 do_return_to_orig:
 		POPFD // 4 bytes
 		ADD ESP, 4 //knock out our return address
-		JMP DWORD PTR [ESP-56] //jmp to DETOUR_GATEWAY_OPTIONS[2]
+		JMP DWORD PTR [ESP-32-4-4-SIZE DETOUR_GATEWAY_OPTIONS+(4*1)] //jmp to DETOUR_GATEWAY_OPTIONS[1]
 	}
 }
 
 void default_callback(GDetour &d, DETOUR_LIVE_SETTINGS &stack_live_data) {
 	char tempstring[512];
-	sprintf_s(tempstring, sizeof(tempstring),"func: 0x%x, ret: 0x%x,\n R[EAX] = 0x%x,\n R[ECX] = 0x%x,\n R[EDX] = 0x%x,\n R[EBX] = 0x%x,\n R[ESP] = 0x%x,\n R[EBP] = 0x%x,\n R[ESI] = 0x%x,\n R[EDI] = 0x%x,\n flags = 0x%x,\n arg0 = 0x%x,\n arg1 = 0x%x\n",
+	sprintf_s(tempstring, sizeof(tempstring),"func: 0x%x, ret: 0x%x,\n R[EAX] = 0x%x,\n R[ECX] = 0x%x,\n R[EDX] = 0x%x,\n R[EBX] = 0x%x,\n R[ESP] = 0x%x,\n R[EBP] = 0x%x,\n R[ESI] = 0x%x,\n R[EDI] = 0x%x,\n flags = 0x%x\n",
 #ifdef DETOUR_DEBUG
 		stack_live_data.ret_addr-6,
 #else
@@ -172,9 +181,7 @@ void default_callback(GDetour &d, DETOUR_LIVE_SETTINGS &stack_live_data) {
 		stack_live_data.registers.ebp,
 		stack_live_data.registers.esi,
 		stack_live_data.registers.edi,
-		stack_live_data.flags,
-		stack_live_data.paramZero,
-		(DWORD*)(&d.live_settings.paramZero)[1]
+		stack_live_data.flags
 	);
 	//MessageBox(0,tempstring, "",0);
 	OutputDebugString(tempstring);
@@ -207,7 +214,7 @@ void detour_c_call_dest(
 
 
 
-	stack_live_data.registers.esp += 4; //ESP is ignored on POPAD anyway, and its up 4 due to PUSHFD. Lets just correct it for simplicity.
+	stack_live_data.registers.esp += 8; //ESP is ignored on POPAD anyway, and its up 4 due to PUSHFD. It's also up 4 due to the detour CALL. Lets just correct it for simplicity.
 
 	d.live_settings = stack_live_data;
 
@@ -221,13 +228,14 @@ void detour_c_call_dest(
 	
 	LeaveCriticalSection(&d.my_critical_section);
 
-	stack_gateway_opt.guard_bottom = 0xCCCCCCCC;
-	stack_gateway_opt.guard_top = 0xCCCCCCCC;
+
+	stack_gateway_opt.guard_top = (int) guard_bottom; //0xCCCCCCCC;
 	/*
 	stack_gateway_opt.bytes_to_pop_on_ret = 0x04040404;
 	stack_gateway_opt.call_original_on_return = 0x08080808;
 	stack_gateway_opt.original_code = (BYTE*) 0x0c0c0c0c;
-	/* */
+	*/
+	stack_gateway_opt.guard_bottom = (int) guard_top; //0xCCCCCCCC;
 }
 
 

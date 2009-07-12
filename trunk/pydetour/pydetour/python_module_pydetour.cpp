@@ -17,7 +17,24 @@ PyObject* Detour_Exception_AlreadyInitilized;
 PyObject* Detour_Exception_WindowsException;
 PyObject* Detour_Exception_AccessViolation;
 
+PyObject* detour_break(PyObject* self, PyObject* args) {
+	if (!PyArg_ParseTuple(args, "")) {
+		return NULL;
+	}
+	__asm {
+		NOP
+		NOP
+		NOP
+		NOP
+		INT 3
+		NOP
+		NOP
+		NOP
+		NOP
 
+	}
+	Py_RETURN_TRUE;
+}
 
 PyObject* detour_callback(PyObject* self, PyObject* args) {
 
@@ -146,6 +163,8 @@ PyObject* detour_setDetourSettings(PyObject* self, PyObject* args) {
 ////////////////////////////////////////////////////////////////////
 static PyMethodDef detour_funcs[] = {
 
+	{"break_into_debugger", (PyCFunction)detour_break, METH_VARARGS, "Execute an INT3 instruction"},
+
 	{"callback", (PyCFunction)detour_callback, METH_VARARGS, "Default callback function"},
 	{"setRegisters", (PyCFunction)detour_setRegisters, METH_VARARGS, "Sets registers"},
 	
@@ -220,7 +239,7 @@ void CallPythonDetour(GDetour &d, DETOUR_LIVE_SETTINGS &stack_live_settings) {
 		OutputDebugString("Can't call detour! detour_pyfunc is null!\n");
 		return;
 	}
-	OutputDebugString("Calling Function...\n");
+
 	PyObject* ret = PyEval_CallFunction(detour_pyfunc, 
 		"i(iiiiiiii)ii", 
 		d.live_settings.ret_addr-5,
@@ -238,7 +257,6 @@ void CallPythonDetour(GDetour &d, DETOUR_LIVE_SETTINGS &stack_live_settings) {
 	if (PyErr_Occurred()) { PyErr_Print(); }
 
 
-	OutputDebugString("Done.\n");
 	Py_XDECREF(detour_pyfunc);
 
 }

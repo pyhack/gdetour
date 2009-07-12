@@ -3,6 +3,8 @@
 #include "python_module_pydetour.h"
 #include "python_module_util.h"
 
+#include <wchar.h>
+
 #include "CPPPython.h"
 using namespace CPPPython;
 
@@ -100,6 +102,25 @@ PyObject* util_ReadASCIIZ(PyObject* self, PyObject* args) {
 		return PyErr_Format(Detour_Exception_WindowsException, "%p is an invalid memory address (Windows Exception %d)", address, GetExceptionCode());
 	}
 }
+PyObject* util_ReadUnicodeZ(PyObject* self, PyObject* args) {
+	wchar_t* address;
+
+	if (!PyArg_ParseTuple(args, "i", &address)) {
+		return NULL;
+	}
+	__try {
+		if (address == NULL) {
+			int x = *(int*)0x0; //Python won't cause the access violation, it'll return None instead
+		}
+		Py_ssize_t size = wcslen(address);
+		return PyUnicode_FromUnicode(address, size);
+	} __except(1) {
+		if (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION) {
+			return PyErr_Format(Detour_Exception_AccessViolation, "%p is an invalid memory address (Access Violation)", address);
+		}
+		return PyErr_Format(Detour_Exception_WindowsException, "%p is an invalid memory address (Windows Exception %d)", address, GetExceptionCode());
+	}
+}
 PyObject* util_ReadMemory(PyObject* self, PyObject* args) {
 	char* address;
 	int bytes;
@@ -154,8 +175,11 @@ PyObject* util_ReadDWORD(PyObject* self, PyObject* args) {
 	}
 }
 
+
 static PyMethodDef util_funcs[] = {
 	{"readASCIIZ", (PyCFunction)util_ReadASCIIZ, METH_VARARGS, "Reads memory, None on NULL pointer"},
+	{"readUnicodeZ", (PyCFunction)util_ReadUnicodeZ, METH_VARARGS, "Reads memory, None on NULL pointer"},
+	
 	{"read", (PyCFunction)util_ReadMemory, METH_VARARGS, "Reads memory"},
 	{"readByte", (PyCFunction)util_ReadByte, METH_VARARGS, "Reads memory"},
 	{"readDWORD", (PyCFunction)util_ReadDWORD, METH_VARARGS, "Reads memory"},
