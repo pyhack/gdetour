@@ -155,7 +155,7 @@ ESP+C: [arg 2]
 
 		POPFD //4 bytes [0]
 		ADD ESP, 4 //knock out our return address
-		JMP DWORD PTR [ESP-32-4-SIZE DETOUR_GATEWAY_OPTIONS+(4*4)] //jmp to new RETN command, which fixes up stack by DETOUR_GATEWAY_OPTIONS[3] bytes
+		JMP DWORD PTR [ESP-32-4-4-SIZE DETOUR_GATEWAY_OPTIONS+(4*4)] //jmp to new RETN command, which fixes up stack by DETOUR_GATEWAY_OPTIONS[3] bytes
 
 do_return_to_orig:
 		POPFD // 4 bytes

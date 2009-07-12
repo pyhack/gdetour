@@ -137,9 +137,10 @@ PyObject* detour_getDetourSettings(PyObject* self, PyObject* args) {
 	if (d == NULL) {
 		return PyErr_Format(PyExc_LookupError, "%p is an invalid detoured address", address);
 	}
-	return Py_BuildValue("(ii)",
+	return Py_BuildValue("(iii)",
 		d->gateway_opt.bytes_to_pop_on_ret,
-		d->gateway_opt.call_original_on_return
+		d->gateway_opt.call_original_on_return,
+		d->gateway_opt.original_code
 	);
 }
 PyObject* detour_setDetourSettings(PyObject* self, PyObject* args) {
