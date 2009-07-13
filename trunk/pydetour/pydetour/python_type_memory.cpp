@@ -132,6 +132,48 @@ static PyObject* memory_qword(memory* self, PyObject* args) {
 
 #pragma endregion //These methods are those like "memory_byte", "memory_dword", etc
 
+static PyObject* memory_rshift(memory* self, PyObject* other) {
+	long amt;
+	if (self->ob_type != &memoryType) {
+		return PyErr_Format(PyExc_IndexError, "left operand must be memory");
+	}
+	if (!PyInt_Check(other)) {
+		return PyErr_Format(PyExc_IndexError, "right operand must be int");
+	}
+	amt = PyInt_AsLong(other);
+	if (IsBadReadPtr((LPVOID)self->base, 4)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->base);
+	}
+	if (IsBadReadPtr((const void*) (self->base + amt), 4)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", *(long*)self->base + amt);
+	}
+	PObject mT((PyObject*)&memoryType);
+	PObject tmp = PyInt_FromLong(*(long*)self->base + amt);
+	PObject newObj = mT.call(tmp, NULL);
+	newObj.incRef(); //live beyond return
+
+	return newObj;
+
+}
+
+static PyObject* memory_pointer(memory* self, PyObject* args) {
+	PObject mT((PyObject*)&memoryType);
+	int count = 1;
+	if (!PyArg_ParseTuple(args, "")) {
+		return NULL;
+	}
+	if (IsBadReadPtr((LPVOID)self->base, count*4)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->base);
+	}
+
+
+	PObject tmp = PyLong_FromLong(*(long*)self->base);
+	PObject newObj = mT.call(tmp, NULL);
+	newObj.incRef(); //live beyond return
+
+	return newObj;
+}
+
 //-------------------------------------------------------------------------
 //-------------------------------------------------------------------------
 //------Sequence Methods
@@ -139,6 +181,7 @@ static PyObject* memory_qword(memory* self, PyObject* args) {
 static PyObject* memory_getItem(memory* self, Py_ssize_t i) {
 	PObject mT((PyObject*)&memoryType);
 
+	i += (Py_ssize_t) self->base;
 	if (IsBadReadPtr((LPVOID)i, 1)) {
 		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", i);
 	}
@@ -150,6 +193,8 @@ static PyObject* memory_getItem(memory* self, Py_ssize_t i) {
 
 	return newObj;
 }
+
+
 
 static PyObject* memory_getSlice(memory* self, Py_ssize_t i, Py_ssize_t len) {
 	i += (long)self->base;
@@ -230,6 +275,7 @@ static PyGetSetDef memory_getseters[] = {
 	{NULL}  /* Sentinel */
 };
 static PyMethodDef memory_methods[] = {
+	{"pointer", (PyCFunction)memory_pointer, METH_VARARGS, "Returns another memory instance (like indexing) by following the pointer at the current address. This function never increases the autoInc cursor."},
 	{"byte", (PyCFunction)memory_byte, METH_VARARGS, "Returns memory as a sequence of bytes."},
 	{"dword", (PyCFunction)memory_dword, METH_VARARGS, "Returns memory as a sequence of dwords."},
 	{"qword", (PyCFunction)memory_qword, METH_VARARGS, "Returns memory as a sequence of qwords."},
@@ -237,7 +283,7 @@ static PyMethodDef memory_methods[] = {
 };
 static PySequenceMethods memory_seq_methods[] = {
 	0, /*lenfunc sq_length;*/
-	0, /*binaryfunc sq_concat;*/
+	0, //(binaryfunc) memory_concat,
 	0, /*ssizeargfunc sq_repeat;*/
 	(ssizeargfunc) memory_getItem, //ssizeargfunc /*sq_item;*/
 	(ssizessizeargfunc) memory_getSlice, //ssizessizeargfunc /*sq_slice;*/
@@ -247,6 +293,53 @@ static PySequenceMethods memory_seq_methods[] = {
 	/* Added in release 2.0 */
 	0, /*binaryfunc sq_inplace_concat;*/
 	0, /*ssizeargfunc sq_inplace_repeat;*/
+};
+static PyNumberMethods memory_num_methods[] = {
+	0, //binaryfunc nb_add;
+	0, //binaryfunc nb_subtract;
+	0, //binaryfunc nb_multiply;
+	0, //binaryfunc nb_divide;
+	0, //binaryfunc nb_remainder;
+	0, //binaryfunc nb_divmod;
+	0, //ternaryfunc nb_power;
+	0, //unaryfunc nb_negative;
+	0, //unaryfunc nb_positive;
+	0, //unaryfunc nb_absolute;
+	0, //inquiry nb_nonzero;
+	0, //unaryfunc nb_invert;
+	0, //nb_lshift;
+	(binaryfunc) memory_rshift, //nb_rshift;
+	0, //binaryfunc nb_and;
+	0, //binaryfunc nb_xor;
+	0, //binaryfunc nb_or;
+	0, //coercion nb_coerce;
+	0, //unaryfunc nb_int;
+	0, //unaryfunc nb_long;
+	0, //unaryfunc nb_float;
+	0, //unaryfunc nb_oct;
+	0, //unaryfunc nb_hex;
+	/* Added in release 2.0 */
+	0, //binaryfunc nb_inplace_add;
+	0, //binaryfunc nb_inplace_subtract;
+	0, //binaryfunc nb_inplace_multiply;
+	0, //binaryfunc nb_inplace_divide;
+	0, //binaryfunc nb_inplace_remainder;
+	0, //ternaryfunc nb_inplace_power;
+	0, //binaryfunc nb_inplace_lshift;
+	0, //binaryfunc nb_inplace_rshift;
+	0, //binaryfunc nb_inplace_and;
+	0, //binaryfunc nb_inplace_xor;
+	0, //binaryfunc nb_inplace_or;
+
+	/* Added in release 2.2 */
+	/* The following require the Py_TPFLAGS_HAVE_CLASS flag */
+	0, //binaryfunc nb_floor_divide;
+	0, //binaryfunc nb_true_divide;
+	0, //binaryfunc nb_inplace_floor_divide;
+	0, //binaryfunc nb_inplace_true_divide;
+
+	/* Added in release 2.5 */
+	0, //unaryfunc nb_index;
 };
 static PyTypeObject memoryType = {
     PyObject_HEAD_INIT(NULL)
@@ -260,7 +353,7 @@ static PyTypeObject memoryType = {
     0,                         /*tp_setattr*/
     0,                         /*tp_compare*/
     (reprfunc)memory_repr,                         /*tp_repr*/
-    0,                         /*tp_as_number*/
+    memory_num_methods,                         /*tp_as_number*/
     memory_seq_methods,                         /*tp_as_sequence*/
     0,                         /*tp_as_mapping*/
     0,                         /*tp_hash */
@@ -269,7 +362,7 @@ static PyTypeObject memoryType = {
     0,                         /*tp_getattro*/
     0,                         /*tp_setattro*/
     0,                         /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_CHECKTYPES, /*tp_flags*/
     "Instances of memory allow indexing into the memory of the current process. Use memory[0x1234] to return the single byte at that location. Use memory[0x1234] = 23 to set the single byte. Alternatively, to set larger sized values, use memory[0x1234] = (4, 23456) (That is, set it to a tuple of (bytesize, value). Note that bytesize can be at most 4.",           /* tp_doc */
     0,		               /* tp_traverse */
     0,		               /* tp_clear */

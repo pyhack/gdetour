@@ -164,6 +164,9 @@ do_return_to_orig:
 	}
 }
 
+
+
+
 void default_callback(GDetour &d, DETOUR_LIVE_SETTINGS &stack_live_data) {
 	char tempstring[512];
 	sprintf_s(tempstring, sizeof(tempstring),"func: 0x%x, ret: 0x%x,\n R[EAX] = 0x%x,\n R[ECX] = 0x%x,\n R[EDX] = 0x%x,\n R[EBX] = 0x%x,\n R[ESP] = 0x%x,\n R[EBP] = 0x%x,\n R[ESI] = 0x%x,\n R[EDI] = 0x%x,\n flags = 0x%x\n",
