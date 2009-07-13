@@ -1,4 +1,6 @@
 from detour_callback_object import DetourCallbackObject
+import logging
+log = logging.getLogger(__name__)
 
 class _DetourManager(dict):
     """DetourManager is a class that managers a group of detours. It's keys are addresses, and it's values are Detour instances"""
@@ -22,10 +24,14 @@ class _DetourManager(dict):
                 detour.config.callback(obj)
             except Exception, e:
                 import traceback
-                print "Exception in callback for function at address 0x%08x:\n"%(address)
+                log.exception("Exception in callback for function at address 0x%08x:\n"%(address))
                 traceback.print_exc()
                 print ""
-                #raise e
+                if getattr(detour.config.callback, "debug_on_exception", False):
+                    import pdb
+                    import sys
+                    pdb.post_mortem(sys.exc_info()[2])
+                    #raise e
             try:
                 obj.applyRegisters()
             except LookupError: #could have removed the detour from inside the callback function
