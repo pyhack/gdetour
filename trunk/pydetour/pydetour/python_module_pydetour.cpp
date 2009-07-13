@@ -137,18 +137,21 @@ PyObject* detour_getDetourSettings(PyObject* self, PyObject* args) {
 	if (d == NULL) {
 		return PyErr_Format(PyExc_LookupError, "%p is an invalid detoured address", address);
 	}
-	return Py_BuildValue("(iii)",
+	return Py_BuildValue("(iiii)",
 		d->gateway_opt.bytes_to_pop_on_ret,
 		d->gateway_opt.call_original_on_return,
-		d->gateway_opt.original_code
+		d->gateway_opt.original_code,
+		d->gateway_opt.int3_after_call
 	);
 }
 PyObject* detour_setDetourSettings(PyObject* self, PyObject* args) {
 	DETOUR_GATEWAY_OPTIONS n;
 	BYTE* address;
-	if (!PyArg_ParseTuple(args, "i(ii)", &address, 
-			&n.bytes_to_pop_on_ret,
-			&n.call_original_on_return)
+	if (!PyArg_ParseTuple(args, "i(iii)", &address, 
+		&n.bytes_to_pop_on_ret, //TODO: FIXME: This is broken because we don't restore the RETN xx number
+			&n.call_original_on_return,
+			&n.int3_after_call
+			)
 			) {
 		return NULL;
 	}
@@ -156,8 +159,12 @@ PyObject* detour_setDetourSettings(PyObject* self, PyObject* args) {
 	if (d == NULL) {
 		return PyErr_Format(PyExc_LookupError, "%p is an invalid detoured address", address);
 	}
+	if (n.int3_after_call > 0) {
+		n.int3_after_call = 1;
+	}
 	d->gateway_opt.bytes_to_pop_on_ret = n.bytes_to_pop_on_ret;
 	d->gateway_opt.call_original_on_return = n.call_original_on_return;
+	d->gateway_opt.int3_after_call = n.int3_after_call;
 
 	return Py_BuildValue("i", true);
 }

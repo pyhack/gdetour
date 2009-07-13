@@ -78,6 +78,34 @@ static PyObject* memory_byte(memory* self, PyObject* args) {
 	}
 	return ret;
 }
+static PyObject* memory_get_dword(memory* self, void* closure) {
+	if (IsBadReadPtr((LPVOID)self->base, 4)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->base);
+	}
+	PyObject* ret = PyLong_FromLong(*(long*)self->base);
+	if (self->autoInc == Py_True) {
+		self->base += (4);
+	}
+	return ret;
+}
+int memory_set_dword(memory* self, PyObject* newvalue, void* closure) {
+	if (newvalue == NULL) {
+		PyErr_Format(PyExc_ValueError, "You can't delete memory!");
+	}
+	if (IsBadWritePtr((LPVOID)self->base, 4)) {
+		PyErr_Format(PyExc_IndexError, "%p is an invalid (nonwriteable) memory address", self->base);
+		return -1;
+	}
+	if (!PyInt_Check(newvalue)) {
+		PyErr_Format(PyExc_ValueError, "You can only assign an integral value as a dword.");
+		return -1;
+	}
+	long in_int = PyInt_AsLong(newvalue);
+	assert(sizeof(long) == 4);
+	memcpy(self->base, &in_int, 4);
+	return 0;
+}
+
 static PyObject* memory_dword(memory* self, PyObject* args) {
 	long count = 1;
 	PyObject* in_bool = NULL;
@@ -101,7 +129,7 @@ static PyObject* memory_dword(memory* self, PyObject* args) {
 		for (int i = 0; i < count; i++) {
 			PyTuple_SetItem(ret, i, PyLong_FromLong(*((long*)self->base+i))); //hooray pointer math and ref stealing tuple funcs
 		}
-	}
+	}ret = PyLong_FromLong(*(long*)self->base);
 	if (self->autoInc == Py_True) {
 		self->base += (count * 4);
 	}
@@ -272,12 +300,13 @@ static PyMemberDef memory_members[] = {
 };
 static PyGetSetDef memory_getseters[] = {
 	{"autoInc", (getter)memory_get_autoInc, (setter)memory_set_autoInc, "If True, base pointer is incremented after reading memory", NULL},
+	{"dword", (getter)memory_get_dword, (setter)memory_set_dword, "Read / Write this location in memory as a dword", NULL},
 	{NULL}  /* Sentinel */
 };
 static PyMethodDef memory_methods[] = {
 	{"pointer", (PyCFunction)memory_pointer, METH_VARARGS, "Returns another memory instance (like indexing) by following the pointer at the current address. This function never increases the autoInc cursor."},
 	{"byte", (PyCFunction)memory_byte, METH_VARARGS, "Returns memory as a sequence of bytes."},
-	{"dword", (PyCFunction)memory_dword, METH_VARARGS, "Returns memory as a sequence of dwords."},
+	//{"dword", (PyCFunction)memory_dword, METH_VARARGS, "Returns memory as a sequence of dwords."},
 	{"qword", (PyCFunction)memory_qword, METH_VARARGS, "Returns memory as a sequence of qwords."},
 	{NULL}  /* Sentinel */
 };

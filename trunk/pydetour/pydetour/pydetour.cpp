@@ -150,6 +150,10 @@ ESP+C: [arg 2]
 		//INT 3
 		ADD ESP, SIZE DETOUR_GATEWAY_OPTIONS //+ skip sizeof(DETOUR_GATEWAY_OPTIONS)
 		POPAD //+32 bytes [-4]
+		CMP [ESP-32-SIZE DETOUR_GATEWAY_OPTIONS+(4*5)], 1
+		JNE skip_int3
+		INT 3
+skip_int3:
 		CMP [ESP-32-SIZE DETOUR_GATEWAY_OPTIONS+(4*2)], 1 //32 + 4popad + 12 check DETOUR_GATEWAY_OPTIONS[2] for 1
 		JE do_return_to_orig
 

@@ -27,10 +27,11 @@ struct REGISTERS {
 };
 struct DETOUR_GATEWAY_OPTIONS {
 	int guard_top;// = 0xcccccc;//10
-	BYTE*		original_code;				//c
-	int			call_original_on_return;	//8
-	int			bytes_to_pop_on_ret;		//4
-	BYTE*		address_of_new_retn;
+	BYTE*			original_code;				//c
+	int				call_original_on_return;	//8
+	int				bytes_to_pop_on_ret;		//4
+	BYTE*			address_of_new_retn;
+	unsigned int	int3_after_call;
 	int guard_bottom;// = 0xcccccc; //0
 };
 struct DETOUR_LIVE_SETTINGS {
