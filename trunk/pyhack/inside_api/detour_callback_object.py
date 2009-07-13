@@ -1,6 +1,6 @@
 import pydetour
 import logging
-log = logging.getLogger('detour.callback')
+log = logging.getLogger(__name__)
 
 class DetourCallbackObject:
     """This is the object passed to function that are registed as callbacks. It should be the only way to interact with pydetour"""
@@ -94,6 +94,14 @@ class DetourCallbackObject:
         add = stackNum * 4 #4 byte paramters
         return pydetour.util.readDWORD(self.registers.esp+add)
 
+    def getStackValues(self, stackNum, count):
+        """Returns a value from the stack. 0 = ESP."""
+        ret = []
+        for i in xrange(0, count):
+            add = (stackNum+i) * 4 #4 byte paramters
+            ret.append(pydetour.util.readDWORD(self.registers.esp+add))
+        return ret
+
     def setStackValue(self, stackNum, dword):
         """Returns a value from the stack. 0 = ESP."""
         add = stackNum * 4 #4 byte paramters
@@ -110,15 +118,18 @@ class DetourCallbackObject:
         return pydetour.util.readUnicodeZ(addr)
         
     def getConfiguration(self):
-        n = ["bytesToPop", "executeOriginal", "originalCodeAddress"]
+        n = ["bytesToPop", "executeOriginal", "originalCodeAddress", "int3_after_call"]
         return dict(zip(n, pydetour.getDetourSettings(self.address)))
 
     def setConfiguration(self, settingsDict):
-        n = ["bytesToPop", "executeOriginal"]
+        n = ["bytesToPop", "executeOriginal", "int3_after_call"]
         p = []
         for x in n:
             p.append(settingsDict[x])
         pydetour.setDetourSettings(self.address, p)
+
+    def set_break(self, b=True):
+        self.changeConfiguration(self, "int3_after_call", b)
 
     def changeConfiguration(self, settingname, settingvalue):
         """Helper funtion to change configuration settings on the fly."""

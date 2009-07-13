@@ -8,7 +8,7 @@ __all__ = [
     'DetourManager'
 ]
 import logging
-log = logging.getLogger('detour')
+log = logging.getLogger(__name__)
 
 
 import pydetour
@@ -186,26 +186,28 @@ class Detour:
 
     def apply(self):
         if self.applied:
-            return
+            return self
         log.debug("Applying detour at 0x%08x (%s)"%(self.address, self.config))
         try:
             self.applied = True
             DetourManager[self.address] = self
             pydetour.createDetour(self.address, self.config.overwrite_len, self.config.bytes_to_pop, self.type)
-            pydetour.setDetourSettings(self.address, (self.config.bytes_to_pop, self.config.return_to_original))
+            pydetour.setDetourSettings(self.address, (self.config.bytes_to_pop, self.config.return_to_original, 0))
         except pydetour.DetourAccessViolationException:
             self.applied=False
             del DetourManager[self.address]
             raise pydetour.DetourAccessViolationException("Invalid detour address 0x%08x"%(self.address))
+        return self
 
     def remove(self):
         if not self.applied:
-            return
+            return self
         self.applied = False
         log.debug("Removing detour from 0x%08x (%s)"%(self.address, self.config))
         pydetour.removeDetour(self.address)
         del DetourManager[self.address]
-
+        return self
+        
     def __repr__(self):
         return "<Detour '%s' detouring 0x%08x, %s>"%(self.name,
                                                     self.address,
