@@ -129,7 +129,7 @@ class DetourCallbackObject:
         pydetour.setDetourSettings(self.address, p)
 
     def set_break(self, b=True):
-        self.changeConfiguration(self, "int3_after_call", b)
+        self.changeConfiguration("int3_after_call", b)
 
     def changeConfiguration(self, settingname, settingvalue):
         """Helper funtion to change configuration settings on the fly."""
