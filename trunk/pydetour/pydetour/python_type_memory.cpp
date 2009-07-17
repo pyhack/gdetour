@@ -12,13 +12,11 @@ typedef struct memory {
     PyObject_HEAD
 	PyObject* ctypes;
 
-	BYTE* base;
+	BYTE* cursor;
 	PyObject* autoInc;
 
 
 } memory;
-
-
 
 
 static PyObject * memory_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
@@ -30,7 +28,7 @@ static PyObject * memory_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 			Py_DECREF(self);
 			return PyErr_Format(PyExc_NameError, "Error creating <memory> type: Required module ctypes not found.");
 		}
-		self->base = 0;
+		self->cursor = 0;
 		Py_INCREF(Py_False);
 		self->autoInc = Py_False;
 	}
@@ -42,12 +40,12 @@ static void memory_dealloc(memory* self) {
 	self->ob_type->tp_free((PyObject*)self);
 }
 static int memory_init(memory *self, PyObject *args, PyObject *kwds) {
-	PyArg_ParseTuple(args, "|l", &self->base);
+	PyArg_ParseTuple(args, "|l", &self->cursor);
     return 0;
 }
 
 static PyObject* memory_repr(memory* self) {
-	PyObject* s0 = PyString_FromFormat("<memory object based at %p, autoInc ", self->base);
+	PyObject* s0 = PyString_FromFormat("<memory object with cursor at %p, autoInc ", self->cursor);
 	PyObject* s1 = PyObject_Repr(self->autoInc);
 	PyObject* s2 = PyString_FromString(">");
 
@@ -63,100 +61,169 @@ static PyObject* memory_repr(memory* self) {
 
 #pragma region memory Reading Methods
 
-static PyObject* memory_byte(memory* self, PyObject* args) {
-	long count = 1;
-	if (!PyArg_ParseTuple(args, "|l", &count)) {
-		return NULL;
-	}
-	if (IsBadReadPtr((LPVOID)self->base, count)) {
-		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->base);
-	}
-	PyObject* ret;
-	ret = PyString_FromStringAndSize((char*)self->base, count);
-	if (self->autoInc == Py_True) {
-		self->base += count;
-	}
-	return ret;
-}
+//static PyObject* memory_byte(memory* self, PyObject* args) {
+//	long count = 1;
+//	if (!PyArg_ParseTuple(args, "|l", &count)) {
+//		return NULL;
+//	}
+//	if (IsBadReadPtr((LPVOID)self->cursor, count)) {
+//		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->cursor);
+//	}
+//	PyObject* ret;
+//	ret = PyString_FromStringAndSize((char*)self->cursor, count);
+//	if (self->autoInc == Py_True) {
+//		self->cursor += count;
+//	}
+//	return ret;
+//}
 static PyObject* memory_get_dword(memory* self, void* closure) {
-	if (IsBadReadPtr((LPVOID)self->base, 4)) {
-		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->base);
+	assert(sizeof(unsigned long) == 4);
+	if (IsBadReadPtr((LPVOID)self->cursor, 4)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->cursor);
 	}
-	PyObject* ret = PyLong_FromLong(*(long*)self->base);
+	PyObject* ret = PyLong_FromLong(*(long*)self->cursor);
 	if (self->autoInc == Py_True) {
-		self->base += (4);
+		self->cursor += (4);
 	}
 	return ret;
 }
 int memory_set_dword(memory* self, PyObject* newvalue, void* closure) {
+	assert(sizeof(unsigned long) == 4);
 	if (newvalue == NULL) {
 		PyErr_Format(PyExc_ValueError, "You can't delete memory!");
 	}
-	if (IsBadWritePtr((LPVOID)self->base, 4)) {
-		PyErr_Format(PyExc_IndexError, "%p is an invalid (nonwriteable) memory address", self->base);
+	if (IsBadWritePtr((LPVOID)self->cursor, 4)) {
+		PyErr_Format(PyExc_IndexError, "%p is an invalid (nonwriteable) memory address", self->cursor);
 		return -1;
 	}
 	if (!PyInt_Check(newvalue)) {
 		PyErr_Format(PyExc_ValueError, "You can only assign an integral value as a dword.");
 		return -1;
 	}
-	long in_int = PyInt_AsLong(newvalue);
+	unsigned long in_int = PyInt_AsLong(newvalue);
 	assert(sizeof(long) == 4);
-	memcpy(self->base, &in_int, 4);
+	memcpy(self->cursor, &in_int, 4);
+	return 0;
+}
+static PyObject* memory_get_word(memory* self, void* closure) {
+	assert(sizeof(unsigned short int) == 2);
+	if (IsBadReadPtr((LPVOID)self->cursor, 2)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->cursor);
+	}
+	unsigned long l_ret = *(unsigned short int*)self->cursor;
+	PyObject* ret = PyLong_FromLong(l_ret);
+	if (self->autoInc == Py_True) {
+		self->cursor += (2);
+	}
+	return ret;
+}
+int memory_set_word(memory* self, PyObject* newvalue, void* closure) {
+	assert(sizeof(unsigned short int) == 2);
+	if (newvalue == NULL) {
+		PyErr_Format(PyExc_ValueError, "You can't delete memory!");
+	}
+	if (IsBadWritePtr((LPVOID)self->cursor, 2)) {
+		PyErr_Format(PyExc_IndexError, "%p is an invalid (nonwriteable) memory address", self->cursor);
+		return -1;
+	}
+	if (!PyInt_Check(newvalue)) {
+		PyErr_Format(PyExc_ValueError, "You can only assign an integral value as a dword.");
+		return -1;
+	}
+	unsigned long in_int = PyInt_AsLong(newvalue);
+	if (in_int >= (1 << 16)) {
+		PyErr_Format(PyExc_ValueError, "A word's value must less than 65536.");
+		return -1;
+	}
+	assert(sizeof(short) == 2);
+	memcpy(self->cursor, &in_int, 2);
+	return 0;
+}
+static PyObject* memory_get_byte(memory* self, void* closure) {
+	assert(sizeof(BYTE) == 1);
+	if (IsBadReadPtr((LPVOID)self->cursor, 1)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->cursor);
+	}
+	unsigned long l_ret = *(BYTE*)self->cursor;
+	PyObject* ret = PyLong_FromLong(l_ret);
+	if (self->autoInc == Py_True) {
+		self->cursor += (1);
+	}
+	return ret;
+}
+int memory_set_byte(memory* self, PyObject* newvalue, void* closure) {
+	assert(sizeof(BYTE) == 1);
+	if (newvalue == NULL) {
+		PyErr_Format(PyExc_ValueError, "You can't delete memory!");
+	}
+	if (IsBadWritePtr((LPVOID)self->cursor, 1)) {
+		PyErr_Format(PyExc_IndexError, "%p is an invalid (nonwriteable) memory address", self->cursor);
+		return -1;
+	}
+	if (!PyInt_Check(newvalue)) {
+		PyErr_Format(PyExc_ValueError, "You can only assign an integral value as a dword.");
+		return -1;
+	}
+	unsigned long in_int = PyInt_AsLong(newvalue);
+	if (in_int >=  (1 << 8)) {
+		PyErr_Format(PyExc_ValueError, "A byte's value must less than 256.");
+		return -1;
+	}
+	memcpy(self->cursor, &in_int, 1);
 	return 0;
 }
 
-static PyObject* memory_dword(memory* self, PyObject* args) {
-	long count = 1;
-	PyObject* in_bool = NULL;
-	if (!PyArg_ParseTuple(args, "|lO", &count, &in_bool)) {
-		return NULL;
-	}
-	if (IsBadReadPtr((LPVOID)self->base, count*4)) {
-		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->base);
-	}
-	PyObject* ret;
-	if (count == 1) {
-		if (in_bool == Py_True) {
-			PyObject* obj = PyObject_GetAttrString(self->ctypes, "c_long");
-			ret = PyObject_CallMethod(obj,"from_address", "l", (long*)self->base);
-			Py_DECREF(obj);
-		} else {
-			ret = PyLong_FromLong(*(long*)self->base);
-		}
-	} else {
-		ret = PyTuple_New(count);
-		for (int i = 0; i < count; i++) {
-			PyTuple_SetItem(ret, i, PyLong_FromLong(*((long*)self->base+i))); //hooray pointer math and ref stealing tuple funcs
-		}
-	}ret = PyLong_FromLong(*(long*)self->base);
-	if (self->autoInc == Py_True) {
-		self->base += (count * 4);
-	}
-	return ret;
-}
-static PyObject* memory_qword(memory* self, PyObject* args) {
-	long count = 1;
-	if (!PyArg_ParseTuple(args, "|l", &count)) {
-		return NULL;
-	}
-	if (IsBadReadPtr((LPVOID)self->base, count*8)) {
-		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->base);
-	}
-	PyObject* ret;
-	if (count == 1) {
-		ret = PyLong_FromLongLong(*(PY_LONG_LONG*)self->base);
-	} else {
-		ret = PyTuple_New(count);
-		for (int i = 0; i < count; i++) {
-			PyTuple_SetItem(ret, i, PyLong_FromLong(*((PY_LONG_LONG*)self->base+i))); //hooray pointer math and ref stealing tuple funcs
-		}
-	}
-	if (self->autoInc == Py_True) {
-		self->base += (count * 8);
-	}
-	return ret;
-}
+//static PyObject* memory_dword(memory* self, PyObject* args) {
+//	long count = 1;
+//	PyObject* in_bool = NULL;
+//	if (!PyArg_ParseTuple(args, "|lO", &count, &in_bool)) {
+//		return NULL;
+//	}
+//	if (IsBadReadPtr((LPVOID)self->cursor, count*4)) {
+//		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->cursor);
+//	}
+//	PyObject* ret;
+//	if (count == 1) {
+//		if (in_bool == Py_True) {
+//			PyObject* obj = PyObject_GetAttrString(self->ctypes, "c_long");
+//			ret = PyObject_CallMethod(obj,"from_address", "l", (long*)self->cursor);
+//			Py_DECREF(obj);
+//		} else {
+//			ret = PyLong_FromLong(*(long*)self->cursor);
+//		}
+//	} else {
+//		ret = PyTuple_New(count);
+//		for (int i = 0; i < count; i++) {
+//			PyTuple_SetItem(ret, i, PyLong_FromLong(*((long*)self->cursor+i))); //hooray pointer math and ref stealing tuple funcs
+//		}
+//	}ret = PyLong_FromLong(*(long*)self->cursor);
+//	if (self->autoInc == Py_True) {
+//		self->cursor += (count * 4);
+//	}
+//	return ret;
+//}
+//static PyObject* memory_qword(memory* self, PyObject* args) {
+//	long count = 1;
+//	if (!PyArg_ParseTuple(args, "|l", &count)) {
+//		return NULL;
+//	}
+//	if (IsBadReadPtr((LPVOID)self->cursor, count*8)) {
+//		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->cursor);
+//	}
+//	PyObject* ret;
+//	if (count == 1) {
+//		ret = PyLong_FromLongLong(*(PY_LONG_LONG*)self->cursor);
+//	} else {
+//		ret = PyTuple_New(count);
+//		for (int i = 0; i < count; i++) {
+//			PyTuple_SetItem(ret, i, PyLong_FromLong(*((PY_LONG_LONG*)self->cursor+i))); //hooray pointer math and ref stealing tuple funcs
+//		}
+//	}
+//	if (self->autoInc == Py_True) {
+//		self->cursor += (count * 8);
+//	}
+//	return ret;
+//}
 
 #pragma endregion //These methods are those like "memory_byte", "memory_dword", etc
 
@@ -169,14 +236,14 @@ static PyObject* memory_rshift(memory* self, PyObject* other) {
 		return PyErr_Format(PyExc_IndexError, "right operand must be int");
 	}
 	amt = PyInt_AsLong(other);
-	if (IsBadReadPtr((LPVOID)self->base, 4)) {
-		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->base);
+	if (IsBadReadPtr((LPVOID)self->cursor, 4)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->cursor);
 	}
-	if (IsBadReadPtr((const void*) (self->base + amt), 4)) {
-		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", *(long*)self->base + amt);
+	if (IsBadReadPtr((const void*) (self->cursor + amt), 4)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", *(long*)self->cursor + amt);
 	}
 	PObject mT((PyObject*)&memoryType);
-	PObject tmp = PyInt_FromLong(*(long*)self->base + amt);
+	PObject tmp = PyInt_FromLong(*(long*)self->cursor + amt);
 	PObject newObj = mT.call(tmp, NULL);
 	newObj.incRef(); //live beyond return
 
@@ -190,12 +257,12 @@ static PyObject* memory_pointer(memory* self, PyObject* args) {
 	if (!PyArg_ParseTuple(args, "")) {
 		return NULL;
 	}
-	if (IsBadReadPtr((LPVOID)self->base, count*4)) {
-		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->base);
+	if (IsBadReadPtr((LPVOID)self->cursor, count*4)) {
+		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", self->cursor);
 	}
 
 
-	PObject tmp = PyLong_FromLong(*(long*)self->base);
+	PObject tmp = PyLong_FromLong(*(long*)self->cursor);
 	PObject newObj = mT.call(tmp, NULL);
 	newObj.incRef(); //live beyond return
 
@@ -209,7 +276,7 @@ static PyObject* memory_pointer(memory* self, PyObject* args) {
 static PyObject* memory_getItem(memory* self, Py_ssize_t i) {
 	PObject mT((PyObject*)&memoryType);
 
-	i += (Py_ssize_t) self->base;
+	i += (Py_ssize_t) self->cursor;
 	if (IsBadReadPtr((LPVOID)i, 1)) {
 		return PyErr_Format(PyExc_IndexError, "%p is an invalid (nonreadable) memory address", i);
 	}
@@ -225,7 +292,7 @@ static PyObject* memory_getItem(memory* self, Py_ssize_t i) {
 
 
 static PyObject* memory_getSlice(memory* self, Py_ssize_t i, Py_ssize_t len) {
-	i += (long)self->base;
+	i += (long)self->cursor;
 	if (IsBadReadPtr((LPVOID)i, len)) {
 		goto err_ptr;
 	}
@@ -247,7 +314,7 @@ static int memory_setItem(memory* self, Py_ssize_t i, PyObject *v) {
 	objsize = s.getLength();
 	char* st = PyString_AsString(v);
 
-	i += (long)self->base;
+	i += (long)self->cursor;
 
 	if (IsBadWritePtr((LPVOID)i, objsize)) {
 		goto err_ptr;
@@ -294,20 +361,22 @@ int memory_set_autoInc(memory* self, PyObject* newvalue, void* closure) {
 
 static PyMemberDef memory_members[] = {
 	//Comment to hide implementation
-	{"base", T_ULONG, offsetof(memory, base), 0, "Base from which reading methods read from"},
+	{"cursor", T_ULONG, offsetof(memory, cursor), 0, "Memory offset from which reading methods begin"},
 	//{"autoInc", T_ULONG, offsetof(memory, base), 0, "If True, base pointer is incremented after reading memory"},
 	{NULL}  /* Sentinel */
 };
 static PyGetSetDef memory_getseters[] = {
-	{"autoInc", (getter)memory_get_autoInc, (setter)memory_set_autoInc, "If True, base pointer is incremented after reading memory", NULL},
+	{"autoInc", (getter)memory_get_autoInc, (setter)memory_set_autoInc, "If True, cursor is incremented after reading memory", NULL},
 	{"dword", (getter)memory_get_dword, (setter)memory_set_dword, "Read / Write this location in memory as a dword", NULL},
+	{"word", (getter)memory_get_word, (setter)memory_set_word, "Read / Write this location in memory as a word", NULL},
+	{"byte", (getter)memory_get_byte, (setter)memory_set_byte, "Read / Write this location in memory as a byte", NULL},
 	{NULL}  /* Sentinel */
 };
 static PyMethodDef memory_methods[] = {
 	{"pointer", (PyCFunction)memory_pointer, METH_VARARGS, "Returns another memory instance (like indexing) by following the pointer at the current address. This function never increases the autoInc cursor."},
-	{"byte", (PyCFunction)memory_byte, METH_VARARGS, "Returns memory as a sequence of bytes."},
+	//{"byte", (PyCFunction)memory_byte, METH_VARARGS, "Returns memory as a sequence of bytes."},
 	//{"dword", (PyCFunction)memory_dword, METH_VARARGS, "Returns memory as a sequence of dwords."},
-	{"qword", (PyCFunction)memory_qword, METH_VARARGS, "Returns memory as a sequence of qwords."},
+	//{"qword", (PyCFunction)memory_qword, METH_VARARGS, "Returns memory as a sequence of qwords."},
 	{NULL}  /* Sentinel */
 };
 static PySequenceMethods memory_seq_methods[] = {
