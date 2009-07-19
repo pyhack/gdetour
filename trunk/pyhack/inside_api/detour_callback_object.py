@@ -2,11 +2,14 @@ import pydetour
 import logging
 log = logging.getLogger(__name__)
 
+DEBUG_LOG_SPAM = False
+
 class DetourCallbackObject:
     """This is the object passed to function that are registed as callbacks. It should be the only way to interact with pydetour"""
 
     def __init__(self, detour, registers, caller):
-        log.debug("init CallBackObject for %s"%(detour))
+        if DEBUG_LOG_SPAM:
+            log.debug("init CallBackObject for %s"%(detour))
         self.address = detour.address
         self.registers = registers
         self.caller = caller
@@ -28,7 +31,8 @@ class DetourCallbackObject:
             self.registers.esi,
             self.registers.edi,
             )
-        log.debug("Changing registers: %s" %(self.registers))
+        if DEBUG_LOG_SPAM:
+            log.debug("Changing registers: %s" %(self.registers))
         return pydetour.setRegisters(self.address, r, self.registers.flags, self.caller)
 
     @staticmethod
