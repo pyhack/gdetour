@@ -4,14 +4,15 @@ log = logging.getLogger(__name__)
 
 class _DetourManager(dict):
     """DetourManager is a class that managers a group of detours. It's keys are addresses, and it's values are Detour instances"""
-
+    def __init__(self):
+        log.warning("Error to see this more than once")
     def do_callback(self, address, registers, caller):
         """
             This function gets slightly massaged arguments from the initial dispatcher.
             It's job is to call the function set as the callback for this particular detour.
         """
         if address not in self:
-            raise Exception, "Detour... doesn't exist...?"
+            raise Exception("Detour of function at %#x... doesn't exist...?"%(address))
             
         detour = self[address]
             
@@ -36,5 +37,7 @@ class _DetourManager(dict):
                 obj.applyRegisters()
             except LookupError: #could have removed the detour from inside the callback function
                 pass
-
-DetourManager = _DetourManager()
+try:
+    DetourManager
+except Exception:
+    DetourManager = _DetourManager()
