@@ -6,6 +6,7 @@ class _DetourManager(dict):
     """DetourManager is a class that managers a group of detours. It's keys are addresses, and it's values are Detour instances"""
     def __init__(self):
         log.warning("Error to see this more than once")
+
     def do_callback(self, address, registers, caller):
         """
             This function gets slightly massaged arguments from the initial dispatcher.
