@@ -14,6 +14,9 @@
 
 class GDetour;
 
+
+
+
 struct REGISTERS {
 	//in order of the pushad call
 	DWORD edi;
@@ -88,3 +91,7 @@ GENERIC_DETOUR_API int test_detour_func(int count=0);
 GENERIC_DETOUR_API int stolen_detour_func(REGISTERS registers, DWORD flags, DWORD retaddr, DWORD params[]);
 
 GENERIC_DETOUR_API GDetour* add_test_detour();
+
+
+GENERIC_DETOUR_API int __cdecl   call_cdecl_func_with_registers(REGISTERS* r, int dest, ...);
+GENERIC_DETOUR_API int __stdcall call_stdcall_func_with_registers(REGISTERS* r, int dest, ...);

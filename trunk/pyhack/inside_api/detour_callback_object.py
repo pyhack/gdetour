@@ -1,5 +1,7 @@
 import pydetour
 import logging
+import ctypes
+
 log = logging.getLogger(__name__)
 
 DEBUG_LOG_SPAM = False
@@ -141,21 +143,55 @@ class DetourCallbackObject:
         d[settingname] = settingvalue
         self.setConfiguration(d)
 
-    def callOriginal(self, params, registers=None, functiontype=None):
+    def callOriginal(self, *params):
+        return self.callOriginalEx(None, None, *params)
+        
+    #If this was python 3.0, i'd have declared it as `def callOriginalEx(self, *params, registers=None, functiontype=None):`
+    def callOriginalEx(self, registers=None, functiontype=None, *params):
+        from .common_detours import getProcAddress
+    
         if (functiontype == None):
-            functiontype = self.detour.config.functionType
+            functiontype = self.detour.config.function_type
+        if (registers == None):
+            registers = self.registers
+
+        dllname = "pydetour_d.pyd"
         if functiontype == "cdecl":
-            pass
-            #push all the vars
-            #call original
-            #pop all the vars
+            funcname = dllname + "::call_cdecl_func_with_registers"
+            addr = getProcAddress(funcname)
+            funct = ctypes.CFUNCTYPE(ctypes.c_long)
         elif functiontype == "stdcall":
-            pass
-            #push stack magic number
-            #push all the vars
-            #call original
-            #check stack magic number
-            #pop all the vars
+            funcname = dllname + "::call_stdcall_func_with_registers"
+            addr = getProcAddress(funcname)
+            funct = ctypes.WINFUNCTYPE(ctypes.c_long)
         else:
             raise Exception("Unsupported function type %s"%(functiontype))
-        raise NotImplementedError("Calling original functions not yet supported");
+       
+        if len(params) != (self.detour.config.bytes_to_pop / 4):
+            raise Exception("Expected %s args, got %s"%(
+                (self.detour.config.bytes_to_pop / 4),
+                len(params)
+            ))
+            
+        dest_ptr = self.getConfiguration()['originalCodeAddress']
+        call_obj = funct.from_address(addr)
+        
+        
+        reg = registers._get_ctypes_instance()
+        
+        at = [ctypes.POINTER(type(reg)), ctypes.c_long]
+        for i in range(0, len(params)):
+            at.append(ctypes.c_long)
+            
+        call_obj.argtypes = ()#tuple(at)
+
+        
+        log.debug("!!! calling %s at %#x", funcname, addr)
+        log.debug("!!! target at %#x", dest_ptr)
+        log.debug("!!! params are %s", params)
+        
+       
+        self.debug_break()
+        ret = call_obj()#ctypes.byref(reg), dest_ptr, *params)
+        
+        return ret

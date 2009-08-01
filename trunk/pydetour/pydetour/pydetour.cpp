@@ -140,7 +140,6 @@ ESP+4: [return address of the caller]
 ESP+8: [arg 1]
 ESP+C: [arg 2]
 */
-//TODO: 
 	__asm {
 		//INT 3
 		PUSHFD //-4 bytes [-4]
@@ -225,7 +224,7 @@ void detour_c_call_dest(
 
 	d.live_settings = stack_live_data;
 
-	default_callback(d, stack_live_data);
+	//default_callback(d, stack_live_data);
 	if (d.callbackFunction) {
 		d.callbackFunction(d, stack_live_data);
 	}
@@ -271,11 +270,51 @@ GENERIC_DETOUR_API GDetour* add_test_detour() {
 	return add_detour((BYTE*) &test_detour_func, 5, 4, NULL);
 }
 
+//cdecl tells the compiler to do it's own argument removal. However, because we call the stdcall version, we need to sub the stack up before the compiler adds it back down.
+__declspec(naked) int __cdecl call_cdecl_func_with_registers(REGISTERS* r, int dest, ...) {
+	__asm {
+		CALL call_stdcall_func_with_registers
+		SUB ESP, (8*4)+4 //move stack back by the size of the first two params here
+	}
+}
 
+__declspec(naked) int __stdcall call_stdcall_func_with_registers(REGISTERS* r, int dest, ...) {
+	/*
+	Calling a function and setting up all the registers (except ESP)
 
+	1. Call helper function a(REGISTERS, DEST, [arg 1], [arg 2], ...)
+	2. a() needs to set all the registers from the stack, and put RETADDR just before the first arg
 
+	Stack:
 
+	ESP+00: 0x_RETADDR to helper function
 
+	ESP+04: 0x_EDI
+	ESP+08: 0x_ESI
+	ESP+0C: 0x_EBP
+	ESP+10: 0x_ESP
+	ESP+14: 0x_EBX
+	ESP+18: 0x_EDX
+	ESP+1C: 0x_ECX
+	ESP+20: 0x_EAX			//gets overwritten with target dest
+
+	ESP+24: TARGET DEST		//gets overwritten with retaddr
+
+	ESP+28: arg 1
+	ESP+2C: arg ...
+	---------------------------------------------------------------------------
+
+	*/
+	__asm {
+		INT 3
+		SUB ESP, 4		//										esp at +04
+		POPAD			//										esp at +24
+		PUSH [ESP]		//copies dest addr 						esp at +20
+		SUB ESP, 8		//skips both dest addrs					esp at +28
+		PUSH [ESP-10*4]	//copies ret addr to just before arg 1	esp at +24
+		JMP DWORD PTR[ESP-4]	//we now rely on the target to pop off any arguments passed to us. this assumes we're talking about stdcall here.
+	}
+}
 
 
 

@@ -36,6 +36,8 @@ PyObject* detour_break(PyObject* self, PyObject* args) {
 	Py_RETURN_TRUE;
 }
 
+
+
 PyObject* detour_callback(PyObject* self, PyObject* args) {
 
 	char* address;
@@ -168,6 +170,8 @@ PyObject* detour_setDetourSettings(PyObject* self, PyObject* args) {
 
 	return Py_BuildValue("i", true);
 }
+
+
 ////////////////////////////////////////////////////////////////////
 static PyMethodDef detour_funcs[] = {
 

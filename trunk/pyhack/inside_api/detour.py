@@ -20,6 +20,20 @@ import struct
 from detour_manager import DetourManager
 from detour_callback_object import DetourCallbackObject
 
+from ctypes import Structure, c_long
+class _registers(Structure):
+    _fields_ = [
+        ("edi", c_long),
+        ("esi", c_long),
+        ("ebp", c_long),
+        ("esp", c_long),
+        ("ebx", c_long),
+        ("edx", c_long),
+        ("ecx", c_long),
+        ("eax", c_long),
+    ]
+
+
 class register_list:
     """Helpful register_list class. Holds the 8 main registers and the flags register"""
     def __init__(self, registertuple, flags):
@@ -32,6 +46,17 @@ class register_list:
         self.esi = registertuple[6]
         self.edi = registertuple[7]
         self.flags = flags
+    def _get_ctypes_instance(self):
+        x = _registers()
+        x.edi = self.edi
+        x.esi = self.esi
+        x.ebp = self.ebp
+        x.esp = self.esp
+        x.ebx = self.ebx
+        x.edx = self.edx
+        x.ecx = self.ecx
+        x.eax = self.eax
+        return x
     def __str__(self):
         return "(EAX: 0x%08x, ECX: 0x%08x, EDX: 0x%08x, EBX: 0x%08x, ESP: 0x%08x, EBP: 0x%08x, ESI: 0x%08x, EDI: 0x%08x, flags: 0x%08x)"%(self.eax, self.ecx, self.edx, self.ebx, self.esp, self.ebp, self.esi, self.edi, self.flags)
 
