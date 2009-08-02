@@ -136,37 +136,62 @@ GENERIC_DETOUR_API int run_python_file(char* filename, bool debugging) {
 //------------------------------------------------------------------------------
 
 //PyThreadState* mainPythonThreadState = NULL;
-
-static char python_path[MAX_PATH];
-
-void Python_Initialize() {
-
 #ifdef _DEBUG
-	//Here we set up PythonHome to our debugging version a few directories up
-	HMODULE pyhandle = GetModuleHandle("python26_d.dll");
+static char* python_dll_name = "python26_d.dll";
+#else
+static char* python_dll_name = "python26.dll";
+#endif
 
-	char pythonhome[MAX_PATH];
-	ZeroMemory(python_path, sizeof(python_path));
-	ZeroMemory(python_path, sizeof(pythonhome));
+static char python_dll_path[MAX_PATH];
+static HMODULE python_dll_handle = NULL;
 
-	GetModuleFileName(pyhandle, python_path, MAX_PATH-50);
 
-	for(int i = MAX_PATH - 1; i > 0; i--) {
-		char* cur = (char*)python_path + i;
+void cstring_strip_trailing_dirs(char* str, int count=1) {
+	int cut = 0;
+	for(int i = strlen(str); i > 0; i--) {
+		char* cur = (char*)(str + i);
 		if (*cur == '\\') {
-			break;
+			cut++;
+			if (cut == count) {
+				return;
+			}
 		}
 		*cur = '\0';
 	}
+}
 
-	memcpy(pythonhome, "PYTHONHOME=", 12);
-	strcat_s(pythonhome, python_path);
-	pythonhome[strlen(pythonhome)-1] = 0;
-	_putenv(pythonhome);
+void Python_Initialize() {
+
+	python_dll_handle = GetModuleHandle(python_dll_name);
+	ZeroMemory(python_dll_path, sizeof(python_dll_path));
+	GetModuleFileName(python_dll_handle, python_dll_path, MAX_PATH-50);
+
+#ifdef _DEBUG
+	//Here we set up PythonHome to our debugging version a few directories up.
+	//We expect the debug version to be straight form a build.
+
+	char python_home[MAX_PATH]; //points to 
+	char python_sys_path[MAX_PATH];
+	ZeroMemory(python_home, sizeof(python_home));
+	ZeroMemory(python_sys_path, sizeof(python_sys_path));
+	strcpy_s(python_sys_path, "PYTHONPATH=");
+
+	strcat_s(python_home, python_dll_path);			//home = dll path
+	strcat_s(python_sys_path, python_dll_path);		//sys = dll path
+
+	cstring_strip_trailing_dirs(python_home, 2); //home = up two dirs from dll path
+	cstring_strip_trailing_dirs(python_sys_path, 1); //sys = up one dir from dll path
+	python_home[strlen(python_home)-1] = 0; //kill trailing slash
+	python_sys_path[strlen(python_sys_path)-1] = 0; //kill trailing slash
+
+	strcat_s(python_sys_path, ";");
+	strcat_s(python_sys_path, python_home);
+
+	Py_SetPythonHome(python_home);
+	_putenv(python_sys_path);
 
 #else
 	//Here we used the installed version of Python at C:\Python26 (we assume)
-	//HMODULE pyhandle = GetModuleHandle("python26.dll");
 #endif
 	Py_Initialize();
 	if (!Py_IsInitialized()) {

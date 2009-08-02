@@ -23,7 +23,7 @@ GENERIC_DETOUR_API int run_python_file(char* filename, bool debugging=true);
 void Python_Initialize();
 void Python_Unload();
 
-extern char python_path[MAX_PATH];
+extern char python_dll_path[MAX_PATH];
 
 
 
