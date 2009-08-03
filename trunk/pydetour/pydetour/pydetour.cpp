@@ -271,14 +271,14 @@ GENERIC_DETOUR_API GDetour* add_test_detour() {
 }
 
 //cdecl tells the compiler to do it's own argument removal. However, because we call the stdcall version, we need to sub the stack up before the compiler adds it back down.
-__declspec(naked) int __cdecl call_cdecl_func_with_registers(REGISTERS* r, int dest, ...) {
+GENERIC_DETOUR_API __declspec(naked) int __cdecl call_cdecl_func_with_registers(REGISTERS r, int dest, ...) {
 	__asm {
 		CALL call_stdcall_func_with_registers
 		SUB ESP, (8*4)+4 //move stack back by the size of the first two params here
 	}
 }
 
-__declspec(naked) int __stdcall call_stdcall_func_with_registers(REGISTERS* r, int dest, ...) {
+GENERIC_DETOUR_API __declspec(naked) int __stdcall call_stdcall_func_with_registers(REGISTERS r, int dest, ...) {
 	/*
 	Calling a function and setting up all the registers (except ESP)
 

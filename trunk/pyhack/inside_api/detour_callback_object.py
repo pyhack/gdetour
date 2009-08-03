@@ -174,16 +174,17 @@ class DetourCallbackObject:
             ))
             
         dest_ptr = self.getConfiguration()['originalCodeAddress']
-        call_obj = funct.from_address(addr)
+        call_obj = funct(addr)
         
         
         reg = registers._get_ctypes_instance()
         
-        at = [ctypes.POINTER(type(reg)), ctypes.c_long]
+        #yay for abusing type checking
+        at = [type(reg), ctypes.c_long]
         for i in range(0, len(params)):
             at.append(ctypes.c_long)
             
-        call_obj.argtypes = ()#tuple(at)
+        call_obj.argtypes = tuple(at)
 
         
         log.debug("!!! calling %s at %#x", funcname, addr)
@@ -192,6 +193,6 @@ class DetourCallbackObject:
         
        
         self.debug_break()
-        ret = call_obj()#ctypes.byref(reg), dest_ptr, *params)
+        ret = call_obj(reg, dest_ptr, *params)
         
         return ret
