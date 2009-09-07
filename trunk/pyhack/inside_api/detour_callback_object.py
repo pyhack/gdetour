@@ -188,11 +188,15 @@ class DetourCallbackObject:
 
         
         log.debug("!!! calling %s at %#x", funcname, addr)
+        log.debug("!!! regs %s", registers)
         log.debug("!!! target at %#x", dest_ptr)
+        
         log.debug("!!! params are %s", params)
         
        
-        self.debug_break()
+        #self.debug_break()
+        
         ret = call_obj(reg, dest_ptr, *params)
+        log.debug("!!! called, ret = %s"%(ret))
         
         return ret

@@ -306,11 +306,11 @@ GENERIC_DETOUR_API __declspec(naked) int __stdcall call_stdcall_func_with_regist
 
 	*/
 	__asm {
-		INT 3
-		SUB ESP, 4		//										esp at +04
+		//INT 3
+		ADD ESP, 4		//										esp at +04
 		POPAD			//										esp at +24
 		PUSH [ESP]		//copies dest addr 						esp at +20
-		SUB ESP, 8		//skips both dest addrs					esp at +28
+		ADD ESP, 8		//skips both dest addrs					esp at +28
 		PUSH [ESP-10*4]	//copies ret addr to just before arg 1	esp at +24
 		JMP DWORD PTR[ESP-4]	//we now rely on the target to pop off any arguments passed to us. this assumes we're talking about stdcall here.
 	}
