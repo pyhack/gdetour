@@ -304,14 +304,30 @@ GENERIC_DETOUR_API __declspec(naked) int __stdcall call_stdcall_func_with_regist
 	ESP+2C: arg ...
 	---------------------------------------------------------------------------
 
+	Calling Convention Preserved Registers:
+
+	EDI, ESI, EBP, EBX
+	http://blogs.msdn.com/oldnewthing/archive/2004/01/08/48616.aspx
+
+	CTypes assumes all four of these are preserved. So, yeah, I'll allow it.
+
 	*/
 	__asm {
 		//INT 3
 		ADD ESP, 4		//										esp at +04
-		POPAD			//										esp at +24
+		POP EAX //POP EDI //These 8 POPs mimic POPAD, with the extra four ignored as per calling convention
+		POP EAX //POP ESI
+		POP EAX //POP EBP
+		POP EAX //POP ESP - Ignored because POPAD ignores it, and it'd really fuck stuff up :)
+		POP EAX //POP EBX
+		POP EDX
+		POP ECX
+		POP EAX
+		//POPAD			//										esp at +24
 		PUSH [ESP]		//copies dest addr 						esp at +20
 		ADD ESP, 8		//skips both dest addrs					esp at +28
 		PUSH [ESP-10*4]	//copies ret addr to just before arg 1	esp at +24
+		//INT 3
 		JMP DWORD PTR[ESP-4]	//we now rely on the target to pop off any arguments passed to us. this assumes we're talking about stdcall here.
 	}
 }

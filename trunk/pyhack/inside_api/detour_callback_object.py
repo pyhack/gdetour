@@ -192,7 +192,7 @@ class DetourCallbackObject:
         log.debug("!!! target at %#x", dest_ptr)
         
         log.debug("!!! params are %s", params)
-        
+        log.debug("!!! i think this is a %s func"%(functiontype))
        
         #self.debug_break()
         
