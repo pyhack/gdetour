@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="pydetour"
+	Name="_detour"
 	ProjectGUID="{7BA10A54-A515-4467-AC83-C66E68C3AC7C}"
 	RootNamespace="generic_detour"
 	Keyword="Win32Proj"

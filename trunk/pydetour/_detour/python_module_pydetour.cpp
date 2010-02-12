@@ -187,11 +187,11 @@ static PyMethodDef detour_funcs[] = {
 
 
 
-PyMODINIT_FUNC initpydetour() {
+PyMODINIT_FUNC init_detour() {
 	//this function is automagically called on import
 
     /* Create the module and add the functions */
-    PyObject* m = Py_InitModule3("pydetour", detour_funcs, "Generic Process Detour");
+    PyObject* m = Py_InitModule3("_detour", detour_funcs, "Generic Process Detour");
 
 	Detour_Exception = PyErr_NewException("gdetour.DetourException", NULL, NULL);
 	Detour_Exception_AlreadyInitilized = PyErr_NewException("gdetour.DetourExceptionAlreadyInitilized", Detour_Exception, NULL);

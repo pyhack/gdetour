@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="test_gdetour"
+	Name="test_pydetour"
 	ProjectGUID="{07A2B9F3-E484-4BC1-8C2C-BA8B3FA41319}"
 	RootNamespace="test_pydetour"
 	Keyword="Win32Proj"
@@ -243,7 +243,7 @@
 					<Tool
 						Name="VCCustomBuildTool"
 						Description="Copying test.cmd"
-						CommandLine="copy &quot;$(InputPath)&quot; &quot;$(TargetDir)&quot; /y"
+						CommandLine="copy &quot;$(InputPath)&quot; &quot;$(TargetDir)&quot; /y&#x0D;&#x0A;"
 						Outputs="&quot;$(TargetDir)\$(InputFileName)&quot;"
 					/>
 				</FileConfiguration>
