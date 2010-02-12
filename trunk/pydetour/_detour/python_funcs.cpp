@@ -44,7 +44,7 @@ PYTHON_DETOUR_API int run_python_file(char* filename, bool debugging) {
 	memset(&fnbuf, 0, sizeof(fnbuf));
 	if (filename[1] != ':') {
 		//assume that this is a relative path from this dll
-		HMODULE h = GetModuleHandle("pydetour.pyd");
+		HMODULE h = GetModuleHandle("_detour.pyd");
 		GetModuleFileName(h, fnbuf, 1022 - strlen(filename));
 		int l = strlen(fnbuf);
 		for(int i = l; i > 0; i--) {

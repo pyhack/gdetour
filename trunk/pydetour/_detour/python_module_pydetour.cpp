@@ -234,7 +234,7 @@ void CallPythonDetour(GDetour &d, DETOUR_LIVE_SETTINGS &stack_live_settings) {
 	P_GIL gil;
 
 
-	PyObject* m = PyImport_AddModule("pydetour");
+	PyObject* m = PyImport_AddModule("_detour");
 
 	if (m == NULL) {
 		OutputDebugString("Can't call detour! module not in locals!\n");
