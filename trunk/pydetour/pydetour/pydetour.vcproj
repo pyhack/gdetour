@@ -41,8 +41,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="Z:\pyhack\python\PC;Z:\pyhack\python\Include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;GENERIC_DETOUR_EXPORTS"
+				AdditionalIncludeDirectories="Z:\pyhack\python\PC;Z:\pyhack\python\Include;..\gdetour"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;PYTHON_DETOUR_EXPORTS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -62,9 +62,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="../debug/gdetour.lib"
 				OutputFile="$(OutDir)\$(ProjectName)_d.pyd"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="Z:\pyhack\python\PCbuild"
+				AdditionalLibraryDirectories="Z:\pyhack\python\PCbuild;"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -118,8 +119,8 @@
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="C:\Python26\include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;GENERIC_DETOUR_EXPORTS"
+				AdditionalIncludeDirectories="C:\Python26\include;..\gdetour"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;PYTHON_DETOUR_EXPORTS"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="2"
@@ -137,6 +138,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="../release/gdetour.lib"
 				OutputFile="$(OutDir)\$(ProjectName).pyd"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="C:\Python26\libs"
@@ -204,10 +206,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\pydetour.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\python_funcs.cpp"
 				>
 			</File>
@@ -259,10 +257,6 @@
 			>
 			<File
 				RelativePath=".\CPPPython.h"
-				>
-			</File>
-			<File
-				RelativePath=".\pydetour.h"
 				>
 			</File>
 			<File

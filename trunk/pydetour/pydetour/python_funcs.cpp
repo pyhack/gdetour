@@ -10,7 +10,7 @@ PDict pyGlobals = NULL;
 //PyObject* myPyGlobals;
 //PyObject* myPyLocals;
 
-GENERIC_DETOUR_API PyObject* run_python_string(char* pycode) {
+PYTHON_DETOUR_API PyObject* run_python_string(char* pycode) {
 	P_GIL gil;
 
 	PyObject* ret = PyRun_String(pycode, Py_single_input, pyGlobals, pyLocals);	
@@ -31,11 +31,11 @@ Source: http://msdn.microsoft.com/en-us/library/ms679360%28VS.85%29.aspx
 */
 #define BIT_29 (1 << 29)
 
-GENERIC_DETOUR_API int run_python_file_error_success = 0;
-GENERIC_DETOUR_API int run_python_file_error_open = BIT_29 + 3;
-GENERIC_DETOUR_API int run_python_file_error_exception = BIT_29 + 4;
+PYTHON_DETOUR_API int run_python_file_error_success = 0;
+PYTHON_DETOUR_API int run_python_file_error_open = BIT_29 + 3;
+PYTHON_DETOUR_API int run_python_file_error_exception = BIT_29 + 4;
 
-GENERIC_DETOUR_API int run_python_file(char* filename, bool debugging) {
+PYTHON_DETOUR_API int run_python_file(char* filename, bool debugging) {
 	//Return values:
 	//0 - Success
 	//Others, see above

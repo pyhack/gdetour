@@ -7,9 +7,6 @@
 #include "python_type_memory.h"
 #include "structmember.h"
 
-
-#include "pydetour.h"
-
 using namespace CPPPython;
 
 PyObject* Detour_Exception;
@@ -103,7 +100,7 @@ PyObject* detour_createDetour(PyObject* self, PyObject* args) {
 		return NULL;
 	}
 
-	bool ret = add_detour(address, overwrite_length, bytes_to_pop, CallPythonDetour, type);
+	GDetour* ret = add_detour(address, overwrite_length, bytes_to_pop, CallPythonDetour, type);
 	
 	if (ret) {
 		Py_RETURN_TRUE;

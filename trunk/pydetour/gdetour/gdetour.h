@@ -3,7 +3,11 @@
 #ifdef GENERIC_DETOUR_EXPORTS
 #define GENERIC_DETOUR_API extern "C" __declspec(dllexport)
 #else
+#ifndef GENERIC_DETOUR_STATIC
 #define GENERIC_DETOUR_API extern "C" __declspec(dllimport)
+#else
+#define GENERIC_DETOUR_API extern "C"
+#endif
 #endif
 
 struct GDetour;
@@ -62,12 +66,10 @@ bool GDetour_Apply(GDetour* detour);
 bool GDetour_Unapply(GDetour* detour);
 
 
-#ifdef GDETOUR_INTERNAL
-
 typedef std::map<BYTE*, GDetour*> detour_list_type;
-
 extern detour_list_type detours;
 
+#ifdef GDETOUR_INTERNAL
 
 
 

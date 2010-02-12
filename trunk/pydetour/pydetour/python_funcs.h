@@ -1,9 +1,9 @@
 #pragma once
 
-#ifdef GENERIC_DETOUR_EXPORTS
-#define GENERIC_DETOUR_API extern "C" __declspec(dllexport)
+#ifdef PYTHON_DETOUR_EXPORTS
+#define PYTHON_DETOUR_API extern "C" __declspec(dllexport)
 #else
-#define GENERIC_DETOUR_API extern "C" __declspec(dllimport)
+#define PYTHON_DETOUR_API extern "C" __declspec(dllimport)
 #endif
 
 #include "CPPPython.h"
@@ -15,10 +15,10 @@
 extern CPPPython::PDict pyLocals;
 extern CPPPython::PDict pyGlobals;
 
-GENERIC_DETOUR_API void run_test();
+PYTHON_DETOUR_API void run_test();
 
-GENERIC_DETOUR_API PyObject* run_python_string(char* pycode);
-GENERIC_DETOUR_API int run_python_file(char* filename, bool debugging=true);
+PYTHON_DETOUR_API PyObject* run_python_string(char* pycode);
+PYTHON_DETOUR_API int run_python_file(char* filename, bool debugging=true);
 
 void Python_Initialize();
 void Python_Unload();
