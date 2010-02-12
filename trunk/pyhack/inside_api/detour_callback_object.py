@@ -1,4 +1,4 @@
-import pydetour
+import _detour
 import logging
 import ctypes
 
@@ -35,21 +35,21 @@ class DetourCallbackObject:
             )
         if DEBUG_LOG_SPAM:
             log.debug("Changing registers: %s" %(self.registers))
-        return pydetour.setRegisters(self.address, r, self.registers.flags, self.caller)
+        return _detour.setRegisters(self.address, r, self.registers.flags, self.caller)
 
     @staticmethod
     def read(address, length):
         """Reads length bytes from address"""
-        return pydetour.util.read(address, length)
+        return _detour.util.read(address, length)
 
     @staticmethod
     def write(address, length, bytes):
         """Writes length bytes to address"""
-        return pydetour.util.write(address, length, bytes)
+        return _detour.util.write(address, length, bytes)
 
         
     def debug_break(self):
-        pydetour.break_into_debugger()
+        _detour.break_into_debugger()
         
     def dump(self):
         """Convient utility function to dump information about this function call"""
@@ -77,7 +77,7 @@ class DetourCallbackObject:
                 t = "+%02X"%((i)*4)
             try:
                 a = self.getStackValue(i)
-            except pydetour.DetourAccessViolationException:
+            except _detour.DetourAccessViolationException:
                 print "\t[ESP%s]: Access Violation"% (t)
 
             try:
@@ -89,50 +89,50 @@ class DetourCallbackObject:
                     print "\t[%s%s]: 0x%08x (U: '%s')" % (addr_lbl, t, a, b)
                 else:
                     print "\t[%s%s]: 0x%08x ('%s')" % (addr_lbl, t, a, b)
-            except pydetour.DetourAccessViolationException:
+            except _detour.DetourAccessViolationException:
                 print "\t[ESP%s]: 0x%08x" % (t, a)
     @property
     def memory(self):
-        return pydetour.memory
+        return _detour.memory
         
     def getStackValue(self, stackNum):
         """Returns a value from the stack. 0 = ESP."""
         add = stackNum * 4 #4 byte paramters
-        return pydetour.util.readDWORD(self.registers.esp+add)
+        return _detour.util.readDWORD(self.registers.esp+add)
 
     def getStackValues(self, stackNum, count):
         """Returns a value from the stack. 0 = ESP."""
         ret = []
         for i in xrange(0, count):
             add = (stackNum+i) * 4 #4 byte paramters
-            ret.append(pydetour.util.readDWORD(self.registers.esp+add))
+            ret.append(_detour.util.readDWORD(self.registers.esp+add))
         return ret
 
     def setStackValue(self, stackNum, dword):
         """Returns a value from the stack. 0 = ESP."""
         add = stackNum * 4 #4 byte paramters
-        return pydetour.util.writeDWORD(self.registers.esp+add, dword)
+        return _detour.util.writeDWORD(self.registers.esp+add, dword)
     
     def getStringStackValue(self, stackNum):
         """Returns a string from a stack pointer. 0 = ESP. Looks up an ASCII string pointed at by stack offset."""
         addr = self.getStackValue(stackNum)
-        return pydetour.util.readASCIIZ(addr)
+        return _detour.util.readASCIIZ(addr)
 
     def getUnicodeStackValue(self, stackNum):
         """Returns a unicode string from a stack pointer. 0 = ESP. Looks up a wchar_t string pointed at by stack offset."""
         addr = self.getStackValue(stackNum)
-        return pydetour.util.readUnicodeZ(addr)
+        return _detour.util.readUnicodeZ(addr)
         
     def getConfiguration(self):
         n = ["bytesToPop", "executeOriginal", "originalCodeAddress", "int3_after_call"]
-        return dict(zip(n, pydetour.getDetourSettings(self.address)))
+        return dict(zip(n, _detour.getDetourSettings(self.address)))
 
     def setConfiguration(self, settingsDict):
         n = ["bytesToPop", "executeOriginal", "int3_after_call"]
         p = []
         for x in n:
             p.append(settingsDict[x])
-        pydetour.setDetourSettings(self.address, p)
+        _detour.setDetourSettings(self.address, p)
 
     def set_break(self, b=True):
         self.changeConfiguration("int3_after_call", b)
@@ -155,7 +155,7 @@ class DetourCallbackObject:
         if (registers == None):
             registers = self.registers
 
-        dllname = "pydetour_d.pyd"
+        dllname = "_detour_d.pyd"
         if functiontype == "cdecl":
             funcname = dllname + "::call_cdecl_func_with_registers"
             addr = getProcAddress(funcname)

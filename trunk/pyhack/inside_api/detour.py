@@ -12,7 +12,7 @@ __all__ = [
 ]
 
 
-import pydetour
+import _detour
 import ctypes
 import pydasm
 import struct
@@ -65,7 +65,7 @@ class register_list:
 ####Helper functions
 def findOptimalTrampolineLength(address, minlen=5, maxlen=12, noisy=False):
     if noisy: log.debug("Determining optimal tramploine size for address 0x%08x:"%(address))
-    buffer = pydetour.util.read(address, maxlen+5)
+    buffer = _detour.util.read(address, maxlen+5)
 
     l = 0
     ic = 0
@@ -86,7 +86,7 @@ def findOptimalTrampolineLength(address, minlen=5, maxlen=12, noisy=False):
 def findBytesToPop(address, maxlen=512, noisy=False):
     t = None
     if noisy: log.debug("Determining bytes to pop for function at address 0x%08x:"%(address))
-    buffer = pydetour.util.read(address, maxlen+5)
+    buffer = _detour.util.read(address, maxlen+5)
     #buffer = "\xC3" #ret
     #buffer = "\xC2\x04" #retn 4
     l = 0
@@ -207,8 +207,8 @@ class Detour:
             self.config.callback_class = callback_class
             self.type = type
             log.debug("Creating python Detour object for function at 0x%08x (%s)"%(self.address, self.config))
-        except pydetour.DetourAccessViolationException:
-            raise pydetour.DetourAccessViolationException("Invalid detour address 0x%08x"%(address))
+        except _detour.DetourAccessViolationException:
+            raise _detour.DetourAccessViolationException("Invalid detour address 0x%08x"%(address))
 
     def apply(self):
         if self.applied:
@@ -217,12 +217,12 @@ class Detour:
         try:
             self.applied = True
             DetourManager[self.address] = self
-            pydetour.createDetour(self.address, self.config.overwrite_len, self.config.bytes_to_pop, self.type)
-            pydetour.setDetourSettings(self.address, (self.config.bytes_to_pop, self.config.return_to_original, 0))
-        except pydetour.DetourAccessViolationException:
+            _detour.createDetour(self.address, self.config.overwrite_len, self.config.bytes_to_pop, self.type)
+            _detour.setDetourSettings(self.address, (self.config.bytes_to_pop, self.config.return_to_original, 0))
+        except _detour.DetourAccessViolationException:
             self.applied=False
             del DetourManager[self.address]
-            raise pydetour.DetourAccessViolationException("Invalid detour address 0x%08x"%(self.address))
+            raise _detour.DetourAccessViolationException("Invalid detour address 0x%08x"%(self.address))
         return self
 
     def remove(self):
@@ -230,7 +230,7 @@ class Detour:
             return self
         self.applied = False
         log.debug("Removing detour from 0x%08x (%s)"%(self.address, self.config))
-        pydetour.removeDetour(self.address)
+        _detour.removeDetour(self.address)
         del DetourManager[self.address]
         return self
         
@@ -247,7 +247,7 @@ def _main_callback(*args, **kwargs):
     detouraddr, r, flags, caller = args[0], args[1], args[2], args[3]
     registers = register_list(r, flags)
     DetourManager.do_callback(detouraddr, registers, caller)
-pydetour.callback = _main_callback
+_detour.callback = _main_callback
 
 
 ##############################################################
