@@ -1,17 +1,24 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual C++ Express 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pydetour", "_detour\pydetour.vcproj", "{7BA10A54-A515-4467-AC83-C66E68C3AC7C}"
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "_detour", "_detour\pydetour.vcxproj", "{7BA10A54-A515-4467-AC83-C66E68C3AC7C}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_pydetour", "test_pydetour\test_pydetour.vcxproj", "{07A2B9F3-E484-4BC1-8C2C-BA8B3FA41319}"
 	ProjectSection(ProjectDependencies) = postProject
 		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1} = {76C6D681-F6D5-4308-A0B8-0D78DAE115C1}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_gdetour", "test_pydetour\test_pydetour.vcproj", "{07A2B9F3-E484-4BC1-8C2C-BA8B3FA41319}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gdetour", "gdetour\gdetour.vcxproj", "{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dumb_repl", "dumb_repl\dumb_repl.vcxproj", "{AE0AC34F-D5A7-4875-BC95-39338B7AC658}"
 	ProjectSection(ProjectDependencies) = postProject
-		{7BA10A54-A515-4467-AC83-C66E68C3AC7C} = {7BA10A54-A515-4467-AC83-C66E68C3AC7C}
+		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1} = {76C6D681-F6D5-4308-A0B8-0D78DAE115C1}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gdetour", "gdetour\gdetour.vcproj", "{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dumb_repl_exe", "dumb_repl_exe\dumb_repl_exe.vcxproj", "{4938FBD2-D681-404C-893D-0BFD0B054FB9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{AE0AC34F-D5A7-4875-BC95-39338B7AC658} = {AE0AC34F-D5A7-4875-BC95-39338B7AC658}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,6 +38,14 @@ Global
 		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}.Debug|Win32.Build.0 = Debug|Win32
 		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}.Release|Win32.ActiveCfg = Release|Win32
 		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}.Release|Win32.Build.0 = Release|Win32
+		{AE0AC34F-D5A7-4875-BC95-39338B7AC658}.Debug|Win32.ActiveCfg = Debug|Win32
+		{AE0AC34F-D5A7-4875-BC95-39338B7AC658}.Debug|Win32.Build.0 = Debug|Win32
+		{AE0AC34F-D5A7-4875-BC95-39338B7AC658}.Release|Win32.ActiveCfg = Release|Win32
+		{AE0AC34F-D5A7-4875-BC95-39338B7AC658}.Release|Win32.Build.0 = Release|Win32
+		{4938FBD2-D681-404C-893D-0BFD0B054FB9}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4938FBD2-D681-404C-893D-0BFD0B054FB9}.Debug|Win32.Build.0 = Debug|Win32
+		{4938FBD2-D681-404C-893D-0BFD0B054FB9}.Release|Win32.ActiveCfg = Release|Win32
+		{4938FBD2-D681-404C-893D-0BFD0B054FB9}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
