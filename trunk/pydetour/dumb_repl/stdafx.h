@@ -30,7 +30,9 @@
 // TODO: reference additional headers your program requires here
 
 
-#include <map>
+#define PYTHON_DETOUR_API extern "C" __declspec(dllexport)
 
+PYTHON_DETOUR_API void run_test();
 
-
+PYTHON_DETOUR_API int* run_python_string(char* pycode);
+PYTHON_DETOUR_API int run_python_file(char* filename, bool debugging=true);

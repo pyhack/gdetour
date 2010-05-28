@@ -10,6 +10,8 @@
 #endif
 #endif
 
+#include <map>
+
 struct GDetour;
 
 struct REGISTERS {

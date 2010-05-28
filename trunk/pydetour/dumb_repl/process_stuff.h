@@ -1,0 +1,1 @@
+HMODULE* GetLoadedModules(HANDLE hProcess);
