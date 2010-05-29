@@ -218,7 +218,7 @@ void detour_c_call_dest(
 #endif
 
 	if (dl == detours.end()) {
-		sprintf_s(tempstring, sizeof(tempstring), "Called detour from function 0x%x and could not find a registered handler. Crash is likely.", (stack_live_data.ret_addr-5));
+		sprintf_s(tempstring, sizeof(tempstring), "Called detour from function 0x%x and could not find a registered handler. Crash is likely.\n", (stack_live_data.ret_addr-5));
 		OutputDebugStringA(tempstring);
 		return;
 	}

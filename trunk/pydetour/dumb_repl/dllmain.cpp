@@ -41,8 +41,12 @@ PYTHON_DETOUR_API int* run_python_string(char* pycode) {
 
 
 void ll_hook(GDetour &d, DETOUR_LIVE_SETTINGS &l) {
-	wprintf(L"%s", l.paramZero);
-	Sleep(1000);
+	if (!GetModuleHandleW((LPCWSTR)l.paramZero)) {
+		wprintf(L"%p: %s (first load, delaying 1s)\n", l.ret_addr, l.paramZero);
+		Sleep(1000);
+	} else {
+		wprintf(L"%p: %s (already loaded)\n", l.ret_addr, l.paramZero);
+	}
 }
 
 PYTHON_DETOUR_API int run_python_file(char* filename, bool debugging) {
@@ -52,20 +56,18 @@ PYTHON_DETOUR_API int run_python_file(char* filename, bool debugging) {
 	HMODULE* modules = GetLoadedModules(GetCurrentProcess());
 	delete[] modules;
 
-	__asm { int 3 }
 
-	printf("detouring loadlibraryexw\n");
-	ll_detour = GDetour_Create(
+	printf("Detouring LoadLibraryExW\n");
+	ll_detour = add_detour(
 		(BYTE*) GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryExW"),
-		7,
-		20,
+		5,
+		0x10,
 		&ll_hook,
-		0x0C
+		0
 	);
 	ll_detour->gateway_opt.call_original_on_return = true;
 	GDetour_Apply(ll_detour);
 
-	__asm { int 3 }
 	return 0; //0 is success
 }
 
