@@ -6,6 +6,11 @@
 #include "process_stuff.h"
 #include <gdetour.h>
 
+#include <string>
+#include <sstream>
+
+HMODULE hmod_k32 = NULL;
+
 GDetour* ll_detour = NULL;
 
 BOOL APIENTRY DllMain( HMODULE hModule,
@@ -17,12 +22,14 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 	{
 	case DLL_PROCESS_ATTACH:
 		printf("O Hello! (DLL_PROCESS_ATTACH)\n");
+		hmod_k32 = GetModuleHandle("kernel32.dll");
 		break;
 	case DLL_THREAD_ATTACH:
 	case DLL_THREAD_DETACH:
 		break;
 	case DLL_PROCESS_DETACH:
-		//printf("Goodbye forever! (DLL_PROCESS_DETACH)\n");
+		printf("Goodbye forever! (DLL_PROCESS_DETACH)\n");
+		CloseHandle(hmod_k32);
 		break;
 	}
 	return TRUE;
@@ -41,11 +48,13 @@ PYTHON_DETOUR_API int* run_python_string(char* pycode) {
 
 
 void ll_hook(GDetour &d, DETOUR_LIVE_SETTINGS &l) {
+	BYTE* lla = (BYTE*) GetProcAddress(hmod_k32, "LoadLibraryExA");
+	DWORD tid = GetCurrentThreadId();
+
 	if (!GetModuleHandleW((LPCWSTR)l.paramZero)) {
-		wprintf(L"%p: %s (first load, delaying 1s)\n", l.ret_addr, l.paramZero);
-		Sleep(1000);
+		wprintf(L"%p %p: %s (thread %d, first load, delaying .25s)\n", *(&l.paramZero-1), l.ret_addr, l.paramZero, tid);
 	} else {
-		wprintf(L"%p: %s (already loaded)\n", l.ret_addr, l.paramZero);
+		wprintf(L"%p: %s (thread %d, already loaded)\n", *(&l.paramZero-1), l.paramZero, tid);
 	}
 }
 
@@ -60,8 +69,8 @@ PYTHON_DETOUR_API int run_python_file(char* filename, bool debugging) {
 	printf("Detouring LoadLibraryExW\n");
 	ll_detour = add_detour(
 		(BYTE*) GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryExW"),
-		5,
-		0x10,
+		7,
+		0x0C,
 		&ll_hook,
 		0
 	);
