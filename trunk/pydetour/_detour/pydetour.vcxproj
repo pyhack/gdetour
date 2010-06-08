@@ -109,6 +109,7 @@
       </PrecompiledHeader>
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</CompileAsManaged>
     </ClCompile>
+    <ClCompile Include="guiconsole.cpp" />
     <ClCompile Include="python_funcs.cpp" />
     <ClCompile Include="python_module_pydetour.cpp" />
     <ClCompile Include="python_module_util.cpp" />
@@ -122,6 +123,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CPPPython.h" />
+    <ClInclude Include="guiconsole.h" />
     <ClInclude Include="python_funcs.h" />
     <ClInclude Include="python_module_pydetour.h" />
     <ClInclude Include="python_module_util.h" />

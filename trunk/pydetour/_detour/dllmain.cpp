@@ -2,7 +2,7 @@
 #include "stdafx.h"
 #include "python_funcs.h"
 
-
+#include "guiconsole.h"
 
 
 BOOL APIENTRY DllMain( HMODULE hModule,
@@ -13,6 +13,8 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 	switch (ul_reason_for_call)
 	{
 	case DLL_PROCESS_ATTACH:
+		OutputDebugString("Initializing _detour");
+		printf("Initializing _detour\n");
 		Python_Initialize();
 		break;
 	case DLL_THREAD_ATTACH:

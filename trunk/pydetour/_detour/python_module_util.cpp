@@ -6,6 +6,7 @@
 #include <wchar.h>
 
 #include "CPPPython.h"
+#include "guiconsole.h"
 using namespace CPPPython;
 
 
@@ -175,6 +176,11 @@ PyObject* util_ReadDWORD(PyObject* self, PyObject* args) {
 	}
 }
 
+PyObject* util_fix_console_io(PyObject* self) {
+	AllocConsole();
+	RedirectIOToConsole();
+	Py_RETURN_TRUE;
+}
 
 static PyMethodDef util_funcs[] = {
 	{"readASCIIZ", (PyCFunction)util_ReadASCIIZ, METH_VARARGS, "Reads memory, None on NULL pointer"},
@@ -188,6 +194,7 @@ static PyMethodDef util_funcs[] = {
 	{"writeDWORD", (PyCFunction)util_WriteDWORD, METH_VARARGS, "Writes memory"},
 
 	{"loadPythonFile", (PyCFunction)util_loadPythonFile, METH_VARARGS, "Loads and executes a python file"},
+	{"fixconsole", (PyCFunction)util_fix_console_io, METH_NOARGS, "Fixes up some stdio stuff"},
 };
 
 

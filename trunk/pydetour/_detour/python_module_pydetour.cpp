@@ -88,7 +88,7 @@ PyObject* detour_setRegisters(PyObject* self, PyObject* args) {
 	//d.live_settings.caller_ret = caller;
 
 
-	return Py_BuildValue("i", true);
+	Py_RETURN_TRUE;
 }
 PyObject* detour_createDetour(PyObject* self, PyObject* args) {
 	BYTE* address;
