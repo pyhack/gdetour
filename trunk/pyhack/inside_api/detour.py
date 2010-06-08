@@ -14,8 +14,15 @@ __all__ = [
 
 import _detour
 import ctypes
-import pydasm
 import struct
+
+try:
+    import pydasm
+except ImportError, e:
+    print "Could not load pydasm."
+    class pydasm(object):
+        def __getattr__(self, attr):
+            raise AttributeError(e)
 
 from detour_manager import DetourManager
 from detour_callback_object import DetourCallbackObject
