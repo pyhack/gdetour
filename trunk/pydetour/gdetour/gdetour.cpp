@@ -1,6 +1,7 @@
 // generic_detour.cpp : Defines the exported functions for the DLL application.
 //
 #pragma once
+const char* ver = "gdetour v0.01 by CBWhiz built " __DATE__ " " __TIME__ "\0";
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -14,11 +15,13 @@ char* guard_top = "Guard - Top";
 char* guard_bottom = "Guard - Bottom";
 
 detour_list_type detours;
+gdetour_malloc_func_type gdetour_malloc = (gdetour_malloc_func_type) malloc;
+gdetour_free_func_type gdetour_free = (gdetour_free_func_type) free;
 
 //#define DETOUR_DEBUG
 
 GDetour* GDetour_Create(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourCallback callback, int type) {
-	GDetour* det = new GDetour;
+	GDetour* det = gdetour_malloc(sizeof(GDetour));
 
 	//type is unused. provided for forward compat.
 #ifdef DETOUR_DEBUG
@@ -67,8 +70,6 @@ GDetour* GDetour_Create(BYTE* address, int overwrite_length, int bytes_to_pop, g
 	*retJmp = CalculateRelativeJMP((DWORD)&det->original_code[det->original_code_len], (DWORD) (det->address + det->original_code_len));
 	
 	det->callbackFunction = callback;
-
-	GDetour_Apply(det);
 	return det;
 }
 
@@ -121,25 +122,42 @@ void GDetour_Destroy(GDetour* det) {
 	if (det->Applied) {
 		GDetour_Unapply(det);
 	}
-	delete det;
+	gdetour_free(det);
 }
 
-
-
-GENERIC_DETOUR_API bool remove_detour(BYTE* address) {
+/*
+GENERIC_DETOUR_API bool gdetour_remove(BYTE* address) {
 	GDetour* d = getDetour(address);
 	if (d == NULL) {
 		return false;
 	}
-	GDetour_Unapply(d);
-	detours.erase(address);
-	return true;
+	gdetour_remove(d);
 }
-GENERIC_DETOUR_API GDetour* add_detour(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourCallback callback, int type) {
+*/
+GENERIC_DETOUR_API GDetour* gdetour_create(BYTE* address, int overwrite_length, int bytes_to_pop, gdetourCallback callback, int type) {
 	GDetour* gd = GDetour_Create(address, overwrite_length, bytes_to_pop, callback, type);
 	detours.insert(std::pair<BYTE*,GDetour*>(address, gd));
 	return gd;
 };
+GENERIC_DETOUR_API void gdetour_destroy(GDetour* detour) {
+	GDetour_Destroy(detour);
+};
+GENERIC_DETOUR_API int gdetour_apply(GDetour* detour) {
+	return GDetour_Apply(detour);
+}
+GENERIC_DETOUR_API int gdetour_unapply(GDetour* detour) {
+	GDetour_Unapply(detour);
+	detours.erase(detour->address);
+	return 1;
+}
+GENERIC_DETOUR_API GDetour* gdetour_get(BYTE* address) {
+	detour_list_type::iterator dl = detours.find((BYTE*)(address));
+	if (dl == detours.end()) {
+		return NULL;
+	}
+	return dl->second;
+}
+
 
 __declspec(naked) int detour_call_dest() {
 /*
@@ -153,6 +171,8 @@ ESP+C: [arg 2]
 		//INT 3
 		PUSHFD //-4 bytes [-4]
 		PUSHAD //-32 bytes [-36]
+		PUSH ver;
+		POP eax;
 		SUB ESP, SIZE DETOUR_GATEWAY_OPTIONS //- sizeof(DETOUR_GATEWAY_OPTIONS)
 		CALL detour_c_call_dest //returns nothing, all options are in above struct
 		//INT 3
@@ -255,13 +275,7 @@ void detour_c_call_dest(
 
 
 
-GENERIC_DETOUR_API GDetour* getDetour(BYTE* address) {
-	detour_list_type::iterator dl = detours.find((BYTE*)(address));
-	if (dl == detours.end()) {
-		return NULL;
-	}
-	return dl->second;
-}
+
 
 //cdecl tells the compiler to do it's own argument removal. However, because we call the stdcall version, we need to sub the stack up before the compiler adds it back down.
 GENERIC_DETOUR_API __declspec(naked) int __cdecl call_cdecl_func_with_registers(REGISTERS r, int dest, ...) {

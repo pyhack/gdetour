@@ -1,5 +1,5 @@
 #include <map>
-#define GENERIC_DETOUR_STATIC
+
 #include <gdetour.h>
 
 void CallPythonDetour(GDetour &d, DETOUR_LIVE_SETTINGS &stack_live_settings);

@@ -4,9 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "_detour", "_detour\pydetour.vcxproj", "{7BA10A54-A515-4467-AC83-C66E68C3AC7C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test_pydetour", "test_pydetour\test_pydetour.vcxproj", "{07A2B9F3-E484-4BC1-8C2C-BA8B3FA41319}"
-	ProjectSection(ProjectDependencies) = postProject
-		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1} = {76C6D681-F6D5-4308-A0B8-0D78DAE115C1}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gdetour", "gdetour\gdetour.vcxproj", "{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}"
 EndProject
@@ -31,21 +28,15 @@ Global
 		{7BA10A54-A515-4467-AC83-C66E68C3AC7C}.Release|Win32.ActiveCfg = Release|Win32
 		{7BA10A54-A515-4467-AC83-C66E68C3AC7C}.Release|Win32.Build.0 = Release|Win32
 		{07A2B9F3-E484-4BC1-8C2C-BA8B3FA41319}.Debug|Win32.ActiveCfg = Debug|Win32
-		{07A2B9F3-E484-4BC1-8C2C-BA8B3FA41319}.Debug|Win32.Build.0 = Debug|Win32
 		{07A2B9F3-E484-4BC1-8C2C-BA8B3FA41319}.Release|Win32.ActiveCfg = Release|Win32
-		{07A2B9F3-E484-4BC1-8C2C-BA8B3FA41319}.Release|Win32.Build.0 = Release|Win32
-		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}.Debug|Win32.ActiveCfg = Debug|Win32
-		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}.Debug|Win32.Build.0 = Debug|Win32
-		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}.Release|Win32.ActiveCfg = Release|Win32
-		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}.Release|Win32.Build.0 = Release|Win32
+		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}.Debug|Win32.ActiveCfg = Debug (LIB)|Win32
+		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}.Debug|Win32.Build.0 = Debug (LIB)|Win32
+		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}.Release|Win32.ActiveCfg = Release (LIB)|Win32
+		{76C6D681-F6D5-4308-A0B8-0D78DAE115C1}.Release|Win32.Build.0 = Release (LIB)|Win32
 		{AE0AC34F-D5A7-4875-BC95-39338B7AC658}.Debug|Win32.ActiveCfg = Debug|Win32
-		{AE0AC34F-D5A7-4875-BC95-39338B7AC658}.Debug|Win32.Build.0 = Debug|Win32
 		{AE0AC34F-D5A7-4875-BC95-39338B7AC658}.Release|Win32.ActiveCfg = Release|Win32
-		{AE0AC34F-D5A7-4875-BC95-39338B7AC658}.Release|Win32.Build.0 = Release|Win32
 		{4938FBD2-D681-404C-893D-0BFD0B054FB9}.Debug|Win32.ActiveCfg = Debug|Win32
-		{4938FBD2-D681-404C-893D-0BFD0B054FB9}.Debug|Win32.Build.0 = Debug|Win32
 		{4938FBD2-D681-404C-893D-0BFD0B054FB9}.Release|Win32.ActiveCfg = Release|Win32
-		{4938FBD2-D681-404C-893D-0BFD0B054FB9}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -69,7 +69,7 @@ PyObject* detour_setRegisters(PyObject* self, PyObject* args) {
 			&caller)) {
 		return NULL;
 	}
-	GDetour* dt = getDetour(address);
+	GDetour* dt = gdetour_get(address);
 	if (dt == NULL) {
 		return PyErr_Format(PyExc_LookupError, "%p is an invalid detoured address", address);
 	}
@@ -100,7 +100,7 @@ PyObject* detour_createDetour(PyObject* self, PyObject* args) {
 		return NULL;
 	}
 
-	GDetour* ret = add_detour(address, overwrite_length, bytes_to_pop, CallPythonDetour, type);
+	GDetour* ret = gdetour_create(address, overwrite_length, bytes_to_pop, CallPythonDetour, type);
 	
 	if (ret) {
 		Py_RETURN_TRUE;
@@ -113,15 +113,12 @@ PyObject* detour_removeDetour(PyObject* self, PyObject* args) {
 	if (!PyArg_ParseTuple(args, "i", &address)) {
 		return NULL;
 	}
-	detour_list_type::iterator dl = detours.find(address);
-	if (dl == detours.end()) {
+	GDetour* d = gdetour_get(address);
+	if (!d) {
 		return PyErr_Format(PyExc_LookupError, "Detour not found at %p", address);
 	}
+	gdetour_destroy(d);
 
-	bool r = remove_detour(address);
-	if (r == false) {
-		return PyErr_Format(Detour_Exception, "Unable to remove detour at %p", address);
-	}
 	Py_RETURN_TRUE;
 }
 PyObject* detour_getDetourSettings(PyObject* self, PyObject* args) {
@@ -132,7 +129,7 @@ PyObject* detour_getDetourSettings(PyObject* self, PyObject* args) {
 		return NULL;
 	}
 
-	GDetour* d = getDetour(address);
+	GDetour* d = gdetour_get(address);
 	if (d == NULL) {
 		return PyErr_Format(PyExc_LookupError, "%p is an invalid detoured address", address);
 	}
@@ -154,7 +151,7 @@ PyObject* detour_setDetourSettings(PyObject* self, PyObject* args) {
 			) {
 		return NULL;
 	}
-	GDetour* d = getDetour(address);
+	GDetour* d = gdetour_get(address);
 	if (d == NULL) {
 		return PyErr_Format(PyExc_LookupError, "%p is an invalid detoured address", address);
 	}

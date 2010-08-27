@@ -4,6 +4,7 @@
 
 #include "guiconsole.h"
 #include "process_stuff.h"
+
 #include <gdetour.h>
 
 #include <string>
@@ -67,7 +68,7 @@ PYTHON_DETOUR_API int run_python_file(char* filename, bool debugging) {
 
 
 	printf("Detouring LoadLibraryExW\n");
-	ll_detour = add_detour(
+	ll_detour = gdetour_create(
 		(BYTE*) GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryExW"),
 		7,
 		0x0C,
@@ -75,7 +76,7 @@ PYTHON_DETOUR_API int run_python_file(char* filename, bool debugging) {
 		0
 	);
 	ll_detour->gateway_opt.call_original_on_return = true;
-	GDetour_Apply(ll_detour);
+	gdetour_apply(ll_detour);
 
 	return 0; //0 is success
 }
