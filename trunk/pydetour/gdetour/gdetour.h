@@ -1,7 +1,6 @@
 #pragma once
 
 #if defined GENERIC_DETOUR_EXPORTS
-#print Compiling gdetour as DLL
 #pragma message( "gdetour being compiled with exports" )
 #define GENERIC_DETOUR_API extern "C" __declspec(dllexport)
 #elif defined GDETOUR_INTERNAL
@@ -107,6 +106,15 @@ DWORD CalculateAbsoluteJMP(DWORD jmp_address, DWORD jmp_reldestination, int jmp_
 	GENERIC_DETOUR_API int gdetour_apply(GDetour* detour);
 #endif
 
+//Utility function
+DWORD& GetStackParameter(DETOUR_LIVE_SETTINGS &l, int index) {
+	DWORD* ptr = &l.paramZero;
+	return *(ptr+index);
+}
+
 //Utility functions that probably don't quite work yet
 GENERIC_DETOUR_API int __cdecl   call_cdecl_func_with_registers(REGISTERS r, int dest, ...);
+//Note that the below call is a stdcall vararg function. This is not an error. However, it is not correctly supported by most compilers, which compile it as cdecl.
+//To fix this, you must use __asm { SUB ESP, 0x24 } or equivalent if your compiler ignores the stdcall.
+//You could alternatively create non-vararg versions by casting it to a stdcall function that takes a set argument count.
 GENERIC_DETOUR_API int __stdcall call_stdcall_func_with_registers(REGISTERS r, int dest, ...);
